@@ -25,10 +25,13 @@ int main() {
     char buffer[BUFFER_SIZE];
     while (1) {
         size = recvfrom(sfd, buffer, BUFFER_SIZE, 0, (sockaddr*) &caddr, &caddr_size);
-        if(size < 6) continue;
+        if(size < 9) continue;
         printf("{%s : %d} ", inet_ntoa(caddr.sin_addr), ntohs(caddr.sin_port)); fflush(stdout);
-        float angle = *(float*)buffer;
-        printf("%f %d %d\n", angle, buffer[4], buffer[5]);
+        uint32_t timestamp = *(unsigned*)buffer;
+        float direction = *(float*)(buffer+4);
+        uint8_t shooting = *(buffer+8) & 0x02;
+        uint8_t engine_on = *(buffer+8) & 0x01;
+        printf("%d %f %d %d\n", timestamp, direction, shooting, engine_on);
     }
     close(sfd);
     return 0;
