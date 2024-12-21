@@ -3,6 +3,7 @@
 #include <SFML/Network.hpp>
 
 #include "user_input.hpp"
+#include "draw.hpp"
 
 #define FPS 100
 #define WINDOW_SIZE 800
@@ -20,10 +21,14 @@ int main() {
     sf::RenderWindow window(sf::VideoMode(WINDOW_SIZE, WINDOW_SIZE), "Spacewar");
     window.setFramerateLimit(FPS);
 
-    // Test Shape
-    sf::CircleShape shape(TEST_SIZE);
-    shape.setFillColor(sf::Color::Green);
-    shape.setOrigin(TEST_SIZE, TEST_SIZE);
+    // Drawing
+    Drawer drawer;
+    Ship ship1(1,vec2{1.0,0.0},vec2{0.0,0.0},0.0,NULL,false);
+    Ship ship2(4,vec2{-1.0,0.0},vec2{0.0,0.0},0.0,NULL,false);
+    Asteroid asteroid(ASTEROIDS_BEGIN,vec2{0.0,0.0},vec2{5.0,5.0});
+    drawer.add(&ship1);
+    drawer.add(&ship2);
+    drawer.add(&asteroid);
 
     // Network
     sf::UdpSocket socket;
@@ -47,7 +52,7 @@ int main() {
 
         // draw phase
         window.clear();
-        window.draw(shape);
+        drawer.draw(&window);
         window.display();
 
         // user phase
