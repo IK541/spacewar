@@ -2,6 +2,7 @@
 #include <SFML/Window.hpp>
 #include <cmath>
 #include <cstdint>
+#include "draw.hpp"
 
 // structs
 
@@ -28,11 +29,7 @@ struct SendData {
 
 // mock definitions
 
-class GameState {
-    public:
-    virtual bool is_game_running() = 0;
-};
-class MockGameState : public GameState {
+class MockGameState : public GameStateI {
     public:
     bool is_game_running() { return true; }
 };
@@ -49,11 +46,11 @@ class InputCollector {
 
 class InputTranslator {
     private:
-    GameState* game_state;
+    GameStateI* game_state;
     sf::Window* window;
     uint32_t timer;
     public:
-    InputTranslator(GameState* game_state, sf::Window* window);
+    InputTranslator(GameStateI* game_state, sf::Window* window);
     void reset_timer();
     SendData translate(UserInput input);
 };

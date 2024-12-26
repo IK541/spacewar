@@ -10,7 +10,7 @@ UserInput InputCollector::collect() {
     };
 }
 
-InputTranslator::InputTranslator(GameState* game_state, sf::Window* window) {
+InputTranslator::InputTranslator(GameStateI* game_state, sf::Window* window) {
     this->game_state = game_state;
     this->window = window;
     this->timer = 0;
@@ -25,7 +25,7 @@ SendData InputTranslator::translate(UserInput input) {
         sf::Vector2f mouse_position = sf::Vector2f(input.pos) - 0.5f * sf::Vector2f(this->window->getSize());
         result.udp_data = UdpSendData {
             .timestamp = this->timer++,
-            .direction = atan2f(mouse_position.y, mouse_position.x),
+            .direction = atan2f(-mouse_position.y, mouse_position.x),
             .flags = (uint8_t)(input.lmb << 1 | input.rmb),
         };
         // TODO: tcp

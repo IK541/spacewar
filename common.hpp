@@ -1,17 +1,21 @@
 #pragma once
 #include <stdint.h>
 
+#define FPS 60
+
 #define INNER_RADIUS 6
-#define BASE_ZONE_RADIUS 4
-#define BASE_RADIUS 2
+#define BASE_ZONE_RADIUS 2
+#define BASE_RADIUS 1
 #define OUTER_WIDTH 2
 #define BARRIER_WIDTH 2
 #define NOFLY_WIDTH 6
 #define OUTER_RADIUS (INNER_RADIUS+2*BASE_ZONE_RADIUS+OUTER_WIDTH)
 #define BARRIER_RADIUS (INNER_RADIUS+2*BASE_ZONE_RADIUS+OUTER_WIDTH+BARRIER_WIDTH)
 #define TOTAL_RADIUS (INNER_RADIUS+2*BASE_ZONE_RADIUS+OUTER_WIDTH+BARRIER_WIDTH+NOFLY_WIDTH)
-#define SIGHT_LIMIT 5
 #define BASE_DIST (INNER_RADIUS+BASE_ZONE_RADIUS)
+// TODO - set appropriate
+// #define SIGHT_LIMIT 5
+#define SIGHT_LIMIT 32
 
 #define PLAYERS_PER_TEAM 3
 #define BULLETS_PER_PLAYER 5
@@ -30,6 +34,8 @@
 #define TYPE_SHIP 1
 #define TYPE_BULLET 2
 #define TYPE_ASTEROID 3
+
+#define EPSILON 0.01
 
 // Movables
 
@@ -97,4 +103,12 @@ struct Neighbours {
 
 struct Base {
     uint16_t hp;
+};
+
+struct Output {
+    uint32_t timestamp;
+    Base blue;
+    Base red;
+    PlayerData player_data;
+    Neighbours neighbours;
 };
