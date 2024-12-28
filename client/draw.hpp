@@ -35,14 +35,14 @@ class GameStateI {
 };
 class DrawDataI {
     public:
-    virtual void getMovables(std::vector<Movable*>* movables) = 0;
+    virtual void get_space_objects(std::vector<SpaceObject*>* objects) = 0;
 };
 
 class Drawer {
     public:
     std::vector<Shape*> shapes;
     // NEW
-    void add(Movable* movable);
+    void add(SpaceObject* object);
     void addAll(DrawDataI* source);
     void clear();
     void draw(sf::RenderWindow* window);
@@ -52,14 +52,14 @@ class Drawer {
 class GameState : public GameStateI, public DrawDataI {
     private:
     uint32_t timestamp=0;
-    bool movables_present[TOTAL_ENTITIES]{};
-    Movable movables[TOTAL_ENTITIES]{};
+    bool objects_present[TOTAL_ENTITIES]{};
+    SpaceObject objects[TOTAL_ENTITIES]{};
     std::mutex mtx;
     public:
     // NEW
-    void getMovables(std::vector<Movable*>* movables);
+    void get_space_objects(std::vector<SpaceObject*>* objects);
     // CONSUMES movables
-    void setMovables(uint32_t timestamp, std::vector<Movable*>* movables);
+    void set_space_objects(uint32_t timestamp, std::vector<SpaceObject*>* objects);
     bool is_game_running();
 };
 
@@ -73,7 +73,7 @@ struct UdpRecvData {
     uint16_t respawn;
     uint8_t ship_id;
     uint16_t movables_count;
-    std::vector<Movable*>* movables;
+    std::vector<SpaceObject*>* objects;
 };
 
 // NEW

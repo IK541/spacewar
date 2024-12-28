@@ -12,57 +12,41 @@ Circle::Circle(sf::Vector2f pos, float scale, sf::Color color):
 Shape(pos,scale,0.0,color){}
 
 void Circle::draw(sf::RenderWindow* window) {
-    sf::CircleShape shape(0.5*this->scale);
-    shape.setOrigin(0.5*this->scale, 0.5*this->scale);
+    sf::CircleShape shape(this->scale);
+    shape.setOrigin(this->scale, this->scale);
     shape.move(this->pos);
     shape.setFillColor(this->color);
     window->draw(shape);
 }
 
 void Triangle::draw(sf::RenderWindow* window) {
-    // TODO: choose for correct hitbox size
     sf::CircleShape shape(this->scale,3);
     shape.setOrigin(this->scale,this->scale);
     shape.move(this->pos);
-    shape.scale(0.67,1.0);
-    shape.rotate(180.0/M_PI*this->angle);
+    shape.scale(1.6,2.4);
+    shape.move(0.f,-0.25f*this->scale);
+    shape.rotate(180.0/M_PI*this->angle+90.0);
     shape.setFillColor(this->color);
     window->draw(shape);
 }
 
-// TODO: move to common
-inline int get_type(uint16_t id) {
-    if(id >= BLUE_TEAM_BEGIN && id < BLUE_BULLETS_BEGIN) return TYPE_SHIP;
-    if(id >= BLUE_BULLETS_BEGIN && id < ASTEROIDS_BEGIN) return TYPE_BULLET;
-    if(id >= ASTEROIDS_BEGIN && id <= TOTAL_ENTITIES) return TYPE_ASTEROID;
-    return 0;
-}
-
-inline bool get_side(uint16_t id) {
-    if(id >= BLUE_TEAM_BEGIN && id < RED_TEAM_BEGIN) return 0;
-    if(id >= RED_TEAM_BEGIN && id < BLUE_BULLETS_BEGIN) return 1;
-    if(id >= BLUE_BULLETS_BEGIN && id < RED_BULLETS_BEGIN) return 0;
-    if(id >= RED_BULLETS_BEGIN && id < ASTEROIDS_BEGIN) return 1;
-    return 0;
-}
-
-void Drawer::add(Movable* movable) {
+void Drawer::add(SpaceObject* object) {
     Shape* shape;
-    uint8_t type = get_type(movable->id);
-    bool side = get_side(movable->id);
+    uint8_t type = get_type(object->id);
+    bool side = get_side(object->id);
     if(type==TYPE_SHIP) shape = new Triangle(
-        sf::Vector2f(movable->position.x,movable->position.y),
+        sf::Vector2f(object->x,object->y),
         SHIP_SIZE,
-        ((Ship*)movable)->direction,
+        object->angle,
         sf::Color(side?255:0,0,side?0:255,255)
     );
     if(type==TYPE_BULLET) shape = new Circle(
-        sf::Vector2f(movable->position.x,movable->position.y),
+        sf::Vector2f(object->x,object->y),
         BULLET_SIZE,
         sf::Color(side?255:0,0,side?0:255,255)
     );
     if(type==TYPE_ASTEROID) shape = new Circle(
-        sf::Vector2f(movable->position.x,movable->position.y),
+        sf::Vector2f(object->x,object->y),
         ASTEROID_SIZE,
         sf::Color(63,63,63,255)
     );
@@ -70,10 +54,10 @@ void Drawer::add(Movable* movable) {
 }
 
 void Drawer::addAll(DrawDataI* source) {
-    std::vector<Movable*> data;
-    source->getMovables(&data);
-    for(Movable* movable: data) this->add(movable);
-    for(Movable* movable: data) delete movable;
+    std::vector<SpaceObject*> data;
+    source->get_space_objects(&data);
+    for(SpaceObject* object: data) this->add(object);
+    for(SpaceObject* object: data) delete object;
 }
 
 void Drawer::clear() {
@@ -89,32 +73,32 @@ Drawer::~Drawer() { this->clear(); }
 
 
 
-void GameState::getMovables(std::vector<Movable*>* movables) {
+void GameState::get_space_objects(std::vector<SpaceObject*>* objects) {
     std::lock_guard<std::mutex> lock(this->mtx);
     for(int i = 0; i < TOTAL_ENTITIES; ++i) {
-        if(this->movables_present[i]) {
-            // TODO: check if these are deep copies
-            movables->push_back(new Movable(this->movables[i]));
+        if(this->objects_present[i]) {
+            SpaceObject it = this->objects[i];
+            objects->push_back(new SpaceObject{it.id,it.x,it.y,it.angle});
         }
     }
 }
 
-void GameState::setMovables(uint32_t timestamp, std::vector<Movable*>* movables) {
+void GameState::set_space_objects(uint32_t timestamp, std::vector<SpaceObject*>* objects) {
     std::lock_guard<std::mutex> lock(this->mtx);
     if(this->timestamp > timestamp) return;
     this->timestamp = timestamp;
-    memset(this->movables_present, false, TOTAL_ENTITIES*sizeof(bool));
-    for(Movable* movable: *movables) {
-        int i = movable->id-1;
-        this->movables_present[i] = true;
-        this->movables[i] = *movable;
+    memset(this->objects_present, false, TOTAL_ENTITIES*sizeof(bool));
+    for(SpaceObject* object: *objects) {
+        int i = object->id-1;
+        this->objects_present[i] = true;
+        this->objects[i] = *object;
         // delete movable;
     }
     // delete movables;
 }
 
 bool GameState::is_game_running() {
-    // TODO
+    // TODO - lobby & tcp
     return true;
 }
 
@@ -129,19 +113,16 @@ UdpRecvData* UdpInputTranslator(uint8_t* data, int size) {
     uint16_t respawn = *((uint16_t*)(data+14));
     uint8_t ship_id = *((uint8_t*)(data+16));
     uint16_t movables_count = (size-18)/6;
-    // TODO: switch from movables/ships to dedicated client class
-    std::vector<Movable*>* movables = new std::vector<Movable*>;
+    std::vector<SpaceObject*>* objects = new std::vector<SpaceObject*>;
     for(int i = 0; i < movables_count; ++i) {
-        uint16_t id = *((uint16_t*)(data+18+6*i));
+        uint8_t id = *((uint8_t*)(data+18+6*i));
         uint16_t x0 = *((uint16_t*)(data+18+6*i+1));
         uint16_t y0 = *((uint16_t*)(data+18+6*i+3));
-        uint8_t data_val = *((uint8_t*)(data+18+7*i+6));
+        uint8_t data_val = *((uint8_t*)(data+18+6*i+5));
         double x = 2.0 * (double) x0 / UINT16_MAX * TOTAL_RADIUS - TOTAL_RADIUS;
         double y = 2.0 * (double) y0 / UINT16_MAX * TOTAL_RADIUS - TOTAL_RADIUS;
-        double direction = (double)data_val / 256.0 * 2.0 * M_PI;
-        if(get_type(id)==TYPE_SHIP) movables->push_back(new Ship(id,vec2{x,y},vec2{0,0},direction,NULL,false));
-        else if(get_type(id)==TYPE_BULLET) movables->push_back(new Bullet(id,vec2{x,y},vec2{0,0},direction,1,false));
-        else movables->push_back(new Asteroid(id,vec2{x,y},vec2{0,0}));
+        double angle = (double)data_val / 256.0 * 2.0 * M_PI;
+        objects->push_back(new SpaceObject{id,x,y,angle});
     }
     return new UdpRecvData {
         .timestamp = timestamp,
@@ -153,6 +134,6 @@ UdpRecvData* UdpInputTranslator(uint8_t* data, int size) {
         .respawn = respawn,
         .ship_id = ship_id,
         .movables_count = movables_count,
-        .movables = movables
+        .objects = objects
     };
 }

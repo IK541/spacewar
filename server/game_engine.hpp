@@ -1,5 +1,4 @@
 #pragma once
-
 #include <set>
 #include <map>
 #include <cstdint>
@@ -9,9 +8,9 @@
 #define SPAWN_RADIUS 0.5
 
 // TODO: set appropriate
-#define SHIP_SPEED 6.0
-#define BULLET_SPEED 20.0
-#define ASTEROID_SPEED 4.0
+#define SHIP_SPEED 2.0
+#define BULLET_SPEED 5.0
+#define ASTEROID_SPEED 1.0
 
 #define MAX_AMMO 20
 #define BULLET_LIFETIME 50

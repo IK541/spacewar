@@ -1,14 +1,6 @@
 #include <cmath>
 #include "room_manager.hpp"
 
-// TODO: move to common
-inline int get_type(uint16_t id) {
-    if(id >= BLUE_TEAM_BEGIN && id < BLUE_BULLETS_BEGIN) return TYPE_SHIP;
-    if(id >= BLUE_BULLETS_BEGIN && id < ASTEROIDS_BEGIN) return TYPE_BULLET;
-    if(id >= ASTEROIDS_BEGIN && id <= TOTAL_ENTITIES) return TYPE_ASTEROID;
-    return 0;
-}
-
 uint8_t* UdpOutputTranslator(Output output) {
     int size = sizeof(output.timestamp) + sizeof(output.blue) + sizeof(output.red) + sizeof(output.player_data)\
     + sizeof(output.neighbours.count) + (output.neighbours.count) * sizeof(CompressedMovable);

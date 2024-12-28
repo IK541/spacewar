@@ -44,27 +44,6 @@ PlayerData Player::generate_player_data() {
     };
 }
 
-// TODO: move to common
-inline int get_type(uint16_t id) {
-    if(id >= BLUE_TEAM_BEGIN && id < BLUE_BULLETS_BEGIN) return TYPE_SHIP;
-    if(id >= BLUE_BULLETS_BEGIN && id < ASTEROIDS_BEGIN) return TYPE_BULLET;
-    if(id >= ASTEROIDS_BEGIN && id <= TOTAL_ENTITIES) return TYPE_ASTEROID;
-    return 0;
-}
-inline double get_size(uint16_t id) {
-    if(id >= BLUE_TEAM_BEGIN && id < BLUE_BULLETS_BEGIN) return SHIP_SIZE;
-    if(id >= BLUE_BULLETS_BEGIN && id < ASTEROIDS_BEGIN) return BULLET_SIZE;
-    if(id >= ASTEROIDS_BEGIN && id <= TOTAL_ENTITIES) return ASTEROID_SIZE;
-    return 0.0;
-}
-inline bool get_side(uint16_t id) {
-    if(id >= BLUE_TEAM_BEGIN && id < RED_TEAM_BEGIN) return 0;
-    if(id >= RED_TEAM_BEGIN && id < BLUE_BULLETS_BEGIN) return 1;
-    if(id >= BLUE_BULLETS_BEGIN && id < RED_BULLETS_BEGIN) return 0;
-    if(id >= RED_BULLETS_BEGIN && id < ASTEROIDS_BEGIN) return 1;
-    return 0;
-}
-
 #define CHECK_XY(x,y) if((x) >= 0 && (y) >= 0 && (x) < GRID_SIZE && (y) < GRID_SIZE)
 void Grid::update_state(Movables* movables) {
     for(int y = 0; y < GRID_SIZE; ++y) {
@@ -332,17 +311,17 @@ void GameEngine::update_physics(double dt) {
     this->grid.update_collisions(&this->movables);
     this->grid.update_zone(&this->movables,vec2{0,-BASE_DIST});
     this->grid.update_zone(&this->movables,vec2{0,BASE_DIST});
-    this->grid.update_base(&this->blue.base,vec2{0,-BASE_DIST},true);
+    // this->grid.update_base(&this->blue.base,vec2{0,-BASE_DIST},true);
     this->grid.update_base(&this->red.base,vec2{0,BASE_DIST},false);
 }
 
-void GameEngine::update_input(int player_id, Input input) {
-    Player* player = get_player(player_id);
+void GameEngine::update_input(int ship_id, Input input) {
+    Player* player = get_player(ship_id);
     player->last_input = input;
 }
 
-Output GameEngine::get_output(int player_id) {
-    Player* player = get_player(player_id);
+Output GameEngine::get_output(int ship_id) {
+    Player* player = get_player(ship_id);
     uint32_t timestamp = this->timestamp;
     Base blue = this->blue.base;
     Base red = this->red.base;

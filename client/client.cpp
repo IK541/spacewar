@@ -1,19 +1,37 @@
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 #include <SFML/Network.hpp>
+#include <vector>
+#include <thread>
+#include <mutex>
 
 #include "user_input.hpp"
 #include "draw.hpp"
-#include "../common.hpp"
 
 #define WINDOW_SIZE 800
 
 #define SERVER_ADDR "127.0.0.1"
 #define SERVER_PORT 10000
+#define CLIENT_PORT 9000
 
 #define TEST_SIZE 1.f
 
+#define SHIP_ID 1
+
+#define BUFFER_SIZE 4096
+
 void resize_window(sf::RenderWindow* window, sf::Event* event, float sight_limit);
+
+void receiver(GameState* game_state, sf::UdpSocket* socket) {
+    std::size_t size = 0;
+    uint8_t buffer[BUFFER_SIZE];
+    while(1) {
+        sf::IpAddress addr; unsigned short port;
+        socket->receive(buffer, BUFFER_SIZE, size, addr, port);
+        UdpRecvData* data = UdpInputTranslator((uint8_t*)buffer, size);
+        game_state->set_space_objects(data->timestamp, data->objects);
+    }
+}
 
 int main() {
     // Window
@@ -21,23 +39,19 @@ int main() {
     window.setFramerateLimit(FPS);
 
     // Drawing
+    GameState* game_state = new GameState;
     Drawer drawer;
-    Ship ship1(1,vec2{1.0,0.0},vec2{0.0,0.0},0.0,NULL,false);
-    Ship ship2(4,vec2{-1.0,0.0},vec2{0.0,0.0},0.0,NULL,false);
-    Asteroid asteroid(ASTEROIDS_BEGIN,vec2{0.0,0.0},vec2{5.0,5.0});
-    drawer.add(&ship1);
-    drawer.add(&ship2);
-    drawer.add(&asteroid);
 
     // Network
-    sf::UdpSocket socket;
-    sf::IpAddress addr = SERVER_ADDR;
-    unsigned short port = SERVER_PORT;
+    sf::UdpSocket* socket = new sf::UdpSocket;
+    socket->bind(CLIENT_PORT);
+    std::thread recv_thread(receiver, game_state, socket);
+    recv_thread.detach();
 
     // input
-    MockGameState game_state;
+    MockGameState mock_game_state;
     InputCollector input_collector(&window);
-    InputTranslator input_translator(&game_state, &window);
+    InputTranslator input_translator(&mock_game_state, &window);
 
     while (window.isOpen()) {
         // init phase
@@ -47,19 +61,19 @@ int main() {
             if (event.type == sf::Event::Resized) resize_window(&window, &event, SIGHT_LIMIT);
         }
 
-        // server phase
-
         // draw phase
+        drawer.addAll(game_state);
         window.clear();
         drawer.draw(&window);
         window.display();
+        drawer.clear();
 
         // user phase
         UserInput user_input = input_collector.collect();
         SendData out_data = input_translator.translate(user_input);
-        uint8_t* binary_out_data = UdpOutputTranslator(out_data.udp_data);
-        if (socket.send(binary_out_data, sizeof(UdpSendData), addr, port) != sf::Socket::Done) printf("UDP error\n");
-        delete binary_out_data;
+        uint8_t* bytes = UdpOutputTranslator(out_data.udp_data);
+        socket->send(bytes, 9, sf::IpAddress(SERVER_ADDR), SERVER_PORT);
+        delete [] bytes;
     }
 
     return 0;

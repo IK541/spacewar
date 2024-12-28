@@ -86,7 +86,7 @@ struct SpaceObject {
     uint8_t id;
     double x;
     double y;
-    double direction;
+    double angle;
 };
 
 // Input
@@ -123,3 +123,25 @@ struct Output {
     PlayerData player_data;
     Neighbours neighbours;
 };
+
+// shared functions
+
+inline int get_type(uint16_t id) {
+    if(id >= BLUE_TEAM_BEGIN && id < BLUE_BULLETS_BEGIN) return TYPE_SHIP;
+    if(id >= BLUE_BULLETS_BEGIN && id < ASTEROIDS_BEGIN) return TYPE_BULLET;
+    if(id >= ASTEROIDS_BEGIN && id <= TOTAL_ENTITIES) return TYPE_ASTEROID;
+    return 0;
+}
+inline double get_size(uint16_t id) {
+    if(id >= BLUE_TEAM_BEGIN && id < BLUE_BULLETS_BEGIN) return SHIP_SIZE;
+    if(id >= BLUE_BULLETS_BEGIN && id < ASTEROIDS_BEGIN) return BULLET_SIZE;
+    if(id >= ASTEROIDS_BEGIN && id <= TOTAL_ENTITIES) return ASTEROID_SIZE;
+    return 0.0;
+}
+inline bool get_side(uint16_t id) {
+    if(id >= BLUE_TEAM_BEGIN && id < RED_TEAM_BEGIN) return 0;
+    if(id >= RED_TEAM_BEGIN && id < BLUE_BULLETS_BEGIN) return 1;
+    if(id >= BLUE_BULLETS_BEGIN && id < RED_BULLETS_BEGIN) return 0;
+    if(id >= RED_BULLETS_BEGIN && id < ASTEROIDS_BEGIN) return 1;
+    return 0;
+}
