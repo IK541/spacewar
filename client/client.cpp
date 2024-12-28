@@ -4,10 +4,9 @@
 
 #include "user_input.hpp"
 #include "draw.hpp"
+#include "../common.hpp"
 
-#define FPS 100
 #define WINDOW_SIZE 800
-#define SIGHT_LIMIT 5
 
 #define SERVER_ADDR "127.0.0.1"
 #define SERVER_PORT 10000

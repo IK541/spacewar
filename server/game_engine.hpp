@@ -6,7 +6,6 @@
 
 #include "../common.hpp"
 
-#define GRID_SIZE (2*TOTAL_RADIUS)
 #define SPAWN_RADIUS 0.5
 
 // TODO: set appropriate
@@ -32,12 +31,12 @@ class Grid;
 class Player {
     public:
     int id;
+    Ship* ship;
     uint16_t ammo;
     uint16_t reload;
     uint16_t rearm;
     uint16_t respawn;
     uint16_t current_bullet;
-    Ship* ship;
     Input last_input; // TODO: add timestamps
     Player();
     Player(int player_id, Ship* ship);
@@ -60,7 +59,7 @@ class Grid {
 
 class Movables {
     public:
-    Movable* items[TOTAL_ENTITIES]; // map? int => Movable*
+    Movable* items[TOTAL_ENTITIES];
     unsigned int seed;
     Movables(unsigned int seed);
     void move(double dt);
@@ -89,10 +88,9 @@ class GameEngine {
     Movables movables;
     Grid grid;
     GameEngine();
-    void set_player(int id, int player_id);
     void update_physics(double dt);
-    void update_input(int player_id, Input input);
-    Output get_output(int player_id);
+    void update_input(int ship_id, Input input);
+    Output get_output(int ship_id);
     private:
-    Player* get_player(int player_id);
+    Player* get_player(int ship_id);
 };

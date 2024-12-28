@@ -51,9 +51,9 @@ class Drawer {
 
 class GameState : public GameStateI, public DrawDataI {
     private:
-    uint32_t timestamp;
-    bool movables_present[TOTAL_ENTITIES];
-    Movable movables[TOTAL_ENTITIES];
+    uint32_t timestamp=0;
+    bool movables_present[TOTAL_ENTITIES]{};
+    Movable movables[TOTAL_ENTITIES]{};
     std::mutex mtx;
     public:
     // NEW
@@ -65,13 +65,13 @@ class GameState : public GameStateI, public DrawDataI {
 
 struct UdpRecvData {
     uint32_t timestamp;
-    Base red;
-    Base blue;
+    uint16_t blue_hp;
+    uint16_t red_hp;
     uint16_t ammo;
     uint16_t reload;
     uint16_t rearm;
     uint16_t respawn;
-    // uint16_t last_id;
+    uint8_t ship_id;
     uint16_t movables_count;
     std::vector<Movable*>* movables;
 };

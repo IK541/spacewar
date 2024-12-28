@@ -127,20 +127,32 @@ UdpRecvData* UdpInputTranslator(uint8_t* data, int size) {
     uint16_t reload = *((uint16_t*)(data+10));
     uint16_t rearm = *((uint16_t*)(data+12));
     uint16_t respawn = *((uint16_t*)(data+14));
-    // uint16_t last_id = *((uint16_t*)(data+16));
-    uint16_t movables_count = (size-18)/7;
+    uint8_t ship_id = *((uint8_t*)(data+16));
+    uint16_t movables_count = (size-18)/6;
+    // TODO: switch from movables/ships to dedicated client class
     std::vector<Movable*>* movables = new std::vector<Movable*>;
     for(int i = 0; i < movables_count; ++i) {
-        uint16_t id = *((uint16_t*)(data+18+7*i));
-        uint16_t x0 = *((uint16_t*)(data+18+7*i+2));
-        uint16_t y0 = *((uint16_t*)(data+18+7*i+4));
+        uint16_t id = *((uint16_t*)(data+18+6*i));
+        uint16_t x0 = *((uint16_t*)(data+18+6*i+1));
+        uint16_t y0 = *((uint16_t*)(data+18+6*i+3));
         uint8_t data_val = *((uint8_t*)(data+18+7*i+6));
         double x = 2.0 * (double) x0 / UINT16_MAX * TOTAL_RADIUS - TOTAL_RADIUS;
         double y = 2.0 * (double) y0 / UINT16_MAX * TOTAL_RADIUS - TOTAL_RADIUS;
-        double direction = (double)(data_val & 127) / 128.0 * 2.0 * M_PI;
-        // movables->push_back(new Asteroid(id, ))
+        double direction = (double)data_val / 256.0 * 2.0 * M_PI;
+        if(get_type(id)==TYPE_SHIP) movables->push_back(new Ship(id,vec2{x,y},vec2{0,0},direction,NULL,false));
+        else if(get_type(id)==TYPE_BULLET) movables->push_back(new Bullet(id,vec2{x,y},vec2{0,0},direction,1,false));
+        else movables->push_back(new Asteroid(id,vec2{x,y},vec2{0,0}));
     }
     return new UdpRecvData {
-        // TODO
+        .timestamp = timestamp,
+        .blue_hp = blue_hp,
+        .red_hp = red_hp,
+        .ammo = ammo,
+        .reload = reload,
+        .rearm = rearm,
+        .respawn = respawn,
+        .ship_id = ship_id,
+        .movables_count = movables_count,
+        .movables = movables
     };
 }

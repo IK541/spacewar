@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include <vector>
 
 #define FPS 60
 
@@ -12,6 +13,7 @@
 #define OUTER_RADIUS (INNER_RADIUS+2*BASE_ZONE_RADIUS+OUTER_WIDTH)
 #define BARRIER_RADIUS (INNER_RADIUS+2*BASE_ZONE_RADIUS+OUTER_WIDTH+BARRIER_WIDTH)
 #define TOTAL_RADIUS (INNER_RADIUS+2*BASE_ZONE_RADIUS+OUTER_WIDTH+BARRIER_WIDTH+NOFLY_WIDTH)
+#define GRID_SIZE (2*TOTAL_RADIUS)
 #define BASE_DIST (INNER_RADIUS+BASE_ZONE_RADIUS)
 // TODO - set appropriate
 // #define SIGHT_LIMIT 5
@@ -19,7 +21,7 @@
 
 #define PLAYERS_PER_TEAM 3
 #define BULLETS_PER_PLAYER 5
-#define ASTEROID_COUNT 32
+#define ASTEROID_COUNT 45
 #define TOTAL_ENTITIES (2*(PLAYERS_PER_TEAM*(1+BULLETS_PER_PLAYER))+ASTEROID_COUNT)
 #define BLUE_TEAM_BEGIN 1
 #define RED_TEAM_BEGIN (PLAYERS_PER_TEAM+1)
@@ -37,7 +39,7 @@
 
 #define EPSILON 0.01
 
-// Movables
+// Movables - TODO move to game engine
 
 struct vec2 {
     double x;
@@ -46,7 +48,7 @@ struct vec2 {
 
 class Movable {
     public:
-    uint16_t id;
+    uint8_t id;
     vec2 position;
     vec2 speed;
     Movable(uint16_t id, vec2 position, vec2 speed):
@@ -78,6 +80,15 @@ class Bullet : public Movable {
     Movable(id, position, speed),direction(direction),lifetime(lifetime),side(side){}
 };
 
+// Space object (movable outside game engine) - TODO
+
+struct SpaceObject {
+    uint8_t id;
+    double x;
+    double y;
+    double direction;
+};
+
 // Input
 
 struct Input {
@@ -93,12 +104,12 @@ struct PlayerData {
     uint16_t reload;
     uint16_t rearm;
     uint16_t respawn;
-    uint16_t ship_id;
+    uint8_t ship_id;
 };
 
 struct Neighbours {
-    uint16_t count;
-    Movable** movables;
+    uint8_t count;
+    std::vector<Movable*>* movables;
 };
 
 struct Base {

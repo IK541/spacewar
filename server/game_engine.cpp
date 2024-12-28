@@ -3,8 +3,6 @@
 #include <cmath>
 #include <ctime>
 
-// TODO: remove this
-#include <cstdio>
 
 Player::Player(int player_id, Ship* ship):id(player_id),ship(ship),
 ammo(MAX_AMMO),reload(0),rearm(0),respawn(RESPAWN_TIME),current_bullet(0),
@@ -41,7 +39,8 @@ PlayerData Player::generate_player_data() {
         .ammo = this->ammo,
         .reload = this->reload,
         .rearm = this->rearm,
-        .respawn = this->respawn
+        .respawn = this->respawn,
+        .ship_id = this->ship->id
     };
 }
 
@@ -110,7 +109,6 @@ inline void update_collisions_square(Movable* movable, std::set<Movable*>* movse
 void Grid::update_collisions(Movables* movables) {
     for(int id = BLUE_TEAM_BEGIN; id < ASTEROIDS_BEGIN; ++id) {
         Movable* movable = movables->items[id-1];
-        double s = get_size(id);
         vec2 pos = movable->position;
         int x = (int) (pos.x + TOTAL_RADIUS);
         int y = (int) (pos.y + TOTAL_RADIUS);
@@ -158,14 +156,13 @@ void Grid::update_base(Base* base, vec2 where, bool side) {
                     movable->position = vec2{INFINITY, INFINITY};
                     if(base->hp) --base->hp;
                 }
-                if(get_type(id) == TYPE_SHIP && get_side(id) == side) {
-                    if((pos.x-where.x)*(pos.x-where.x)+(pos.y-where.y)*(pos.y-where.y)<BASE_RADIUS*BASE_RADIUS) {
-                        Player* player = ((Player*)((Ship*)movable)->player);
-                        if(player->rearm) --player->rearm;
-                        else if(player->ammo < MAX_AMMO) {
-                            ++player->ammo;
-                            player->rearm = RELOAD_TIME;
-                        }
+                if(get_type(id) == TYPE_SHIP && get_side(id) == side)
+                if((pos.x-where.x)*(pos.x-where.x)+(pos.y-where.y)*(pos.y-where.y)<BASE_RADIUS*BASE_RADIUS) {
+                    Player* player = ((Player*)((Ship*)movable)->player);
+                    if(player->rearm) --player->rearm;
+                    else if(player->ammo < MAX_AMMO) {
+                        ++player->ammo;
+                        player->rearm = RELOAD_TIME;
                     }
                 }
             }
@@ -174,16 +171,14 @@ void Grid::update_base(Base* base, vec2 where, bool side) {
 }
 
 Neighbours Grid::getNeighbours(Player* player) {
-    std::vector<Movable*> neighbours;
+    std::vector<Movable*>* movables = new std::vector<Movable*>;
     double sy = player->ship->position.y;
     double sx = player->ship->position.x;
     for(int y = TOTAL_RADIUS-sy-SIGHT_LIMIT-1; y <= TOTAL_RADIUS-sx+SIGHT_LIMIT; ++y)
         for(int x = TOTAL_RADIUS-sx-SIGHT_LIMIT-1; x <= TOTAL_RADIUS-sx+SIGHT_LIMIT; ++x)
             CHECK_XY(x,y) for(Movable* movable: this->fields[y*GRID_SIZE+x])
-                neighbours.push_back(movable);
-    uint16_t count = (uint16_t)neighbours.size();
-    Movable** movables = new Movable*[count];
-    int i = 0; for(Movable* movable: neighbours) movables[i++] = movable;
+                movables->push_back(movable);
+    uint8_t count = (uint8_t)movables->size();
     return Neighbours {
         .count = count,
         .movables = movables
@@ -220,8 +215,8 @@ Movables::Movables(unsigned int seed) {
         double pos_x = cos(angle) * radius;
         double pos_y = sin(angle) * radius;
         double speed_angle = sqrt((double) rand_r(&seed) / (double) RAND_MAX);
-        double speed_x = ASTEROID_SPEED * cos(angle);
-        double speed_y = ASTEROID_SPEED * sin(angle);
+        double speed_x = ASTEROID_SPEED * cos(speed_angle);
+        double speed_y = ASTEROID_SPEED * sin(speed_angle);
         items[i-1] = new Asteroid(i,  vec2{pos_x, pos_y}, vec2{speed_x, speed_y});
     }
     this->seed = seed;
@@ -235,6 +230,7 @@ void Movables::move(double dt) {
 }
 
 void Movables::add_asteroid(uint16_t id) {
+    // TODO: do not generate no fly only asteroids
     double angle = 2 * M_PI * ((double) rand_r(&this->seed) / (double) RAND_MAX);
     double offset = 2 * TOTAL_RADIUS * ((double) rand_r(&this->seed) / (double) RAND_MAX) - TOTAL_RADIUS;
     double position_x = offset * cos(angle) + sqrt(TOTAL_RADIUS*TOTAL_RADIUS - offset*offset) * sin(angle);
@@ -316,13 +312,6 @@ GameEngine::GameEngine():timestamp(0),movables(time(NULL)) {
     }
 }
 
-void GameEngine::set_player(int id, int player_id) {
-    if(id < BLUE_TEAM_BEGIN || id >= BLUE_BULLETS_BEGIN) return;
-    bool side = (id >= RED_TEAM_BEGIN);
-    if(side) this->red.players[id-RED_TEAM_BEGIN].id = player_id;
-    else this->blue.players[id-BLUE_TEAM_BEGIN].id = player_id;
-}
-
 void GameEngine::update_physics(double dt) {
     ++this->timestamp;
     for(int i = 0; i < PLAYERS_PER_TEAM; ++i) {
@@ -371,10 +360,10 @@ Output GameEngine::get_output(int player_id) {
 Player* GameEngine::get_player(int player_id) {
     // linear search - if teams get big this should be improved
     for(int i = 0; i < PLAYERS_PER_TEAM; ++i)
-        if(this->blue.players[i].id == player_id)
+        if(this->blue.players[i].ship->id == player_id)
             return this->blue.players+i;
     for(int i = 0; i < PLAYERS_PER_TEAM; ++i)
-        if(this->red.players[i].id == player_id)
+        if(this->red.players[i].ship->id == player_id)
             return this->red.players+i;
     return NULL;
 }
