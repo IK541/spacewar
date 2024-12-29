@@ -64,12 +64,11 @@ int main() {
         }
 
         // draw phase
+        WindowData window_data = WindowData{&window,window_size,game_state->get_center()};
         set_view(&window, window_size, game_state->get_center());
         drawer.add_all(game_state);
         window.clear();
-        draw_bases(&window);
-        drawer.draw(&window);
-        draw_hp(&window, game_state->get_bases(), WindowData{game_state->get_center(),window_size});
+        drawer.draw(window_data);
         window.display();
         drawer.clear();
 

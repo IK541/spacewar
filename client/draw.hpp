@@ -8,6 +8,9 @@
 #include "../common.hpp"
 
 #define HP_BAR_WIDTH 0.1
+#define AMMO_RADIUS 0.1
+#define RESPAWN_RADIUS 1
+#define RESPAWN_WIDTH 0.2
 
 class Shape {
     public:
@@ -32,30 +35,49 @@ class Triangle : public Shape {
     void draw(sf::RenderWindow* window);
 };
 
+struct DrawData {
+    std::vector<SpaceObject*>* objects;
+    uint16_t blue;
+    uint16_t red;
+    uint16_t ammo;
+    uint16_t respawn;
+};
 class GameStateI {
     public:
     virtual bool is_game_running() = 0;
 };
 class DrawDataI {
     public:
-    virtual void get_space_objects(std::vector<SpaceObject*>* objects) = 0;
+    // virtual void get_space_objects(std::vector<SpaceObject*>* objects) = 0;
+    virtual DrawData get_game_state() = 0;
+};
+struct WindowData {
+    sf::RenderWindow* window;
+    sf::Vector2f size;
+    sf::Vector2f center;
 };
 
 class Drawer {
     public:
     std::vector<Shape*> shapes;
+    uint16_t blue;
+    uint16_t red;
+    uint16_t ammo;
+    uint16_t respawn;
     // NEW
     void add(SpaceObject* object);
     void add_all(DrawDataI* source);
     void clear();
-    void draw(sf::RenderWindow* window);
+    void draw(WindowData window);
     ~Drawer();
+    private:
+    void draw_objects(WindowData window);
+    void draw_zones(WindowData window);
+    void draw_bases(WindowData window);
+    void draw_hp(WindowData window);
+    void draw_ammo(WindowData window);
+    void draw_respawn(WindowData window);
 };
-
-void draw_bases(sf::RenderWindow* window);
-struct Bases { uint16_t blue; uint16_t red; };
-struct WindowData { sf::Vector2f center; sf::Vector2f windows_size; };
-void draw_hp(sf::RenderWindow* window, Bases bases, WindowData window_data);
 
 class GameState : public GameStateI, public DrawDataI {
     private:
@@ -70,13 +92,14 @@ class GameState : public GameStateI, public DrawDataI {
     std::mutex mtx;
     public:
     GameState();
-    // NEW
-    void get_space_objects(std::vector<SpaceObject*>* objects);
-    sf::Vector2f get_center();
-    Bases get_bases();
     // CONSUMES movables
     void set_game_state(GameOut game_out);
+    DrawData get_game_state();
+    sf::Vector2f get_center();
     bool is_game_running();
+    private:
+    // NEW
+    void get_space_objects(std::vector<SpaceObject*>* objects);
 };
 
 // NEW
