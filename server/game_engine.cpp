@@ -104,8 +104,8 @@ void Grid::update_collisions(Movables* movables) {
         vec2 pos = movable->position;
         int x = (int) (pos.x + TOTAL_RADIUS);
         int y = (int) (pos.y + TOTAL_RADIUS);
-        double shift_x = fmod(x, 1.0);
-        double shift_y = fmod(y, 1.0);
+        double shift_x = fmod(x+TOTAL_RADIUS+1, 1.0);
+        double shift_y = fmod(y+TOTAL_RADIUS+1, 1.0);
         double min_x = shift_x - get_size(id);
         double min_y = shift_y - get_size(id);
         double max_x = shift_x + get_size(id);
@@ -285,8 +285,8 @@ void Movables::pull_ships(double dt) {
             double dr = (r-OUTER_RADIUS)/(BARRIER_RADIUS-OUTER_RADIUS);
             double dx = SHIP_SPEED*x/r*dr*dt;
             double dy = SHIP_SPEED*y/r*dr*dt;
-            ship->position.x -= dx;
-            ship->position.y -= dy;
+            ship->speed.x -= dx;
+            ship->speed.y -= dy;
         }
     }
 }
