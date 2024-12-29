@@ -78,6 +78,10 @@ struct GameOut {
     uint8_t movables_count;
     std::vector<SpaceObject*>* objects;
 };
+inline void delete_GameOut(GameOut* game_out) {
+    for(SpaceObject* obj: *game_out->objects) delete obj;
+    delete game_out->objects;
+}
 
 // shared functions
 

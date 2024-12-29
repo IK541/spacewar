@@ -25,7 +25,6 @@ uint8_t* UdpOutputTranslator(GameOut output) {
         memcpy(bytes+pos, &compressed_movable, sizeof(CompressedMovable));
         pos += 6;
     }
-    // TODO: delete output
     return bytes;
 }
 

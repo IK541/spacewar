@@ -162,7 +162,7 @@ void Grid::update_base(Base* base, vec2 where, bool side) {
     }
 }
 
-Neighbours Grid::getNeighbours(Player* player) {
+Neighbours Grid::get_neighbours(Player* player) {
     std::vector<SpaceObject*>* movables = new std::vector<SpaceObject*>;
     int sy = (int)player->ship->position.y;
     int sx = (int)player->ship->position.x;
@@ -291,6 +291,10 @@ void Movables::pull_ships(double dt) {
     }
 }
 
+Movables::~Movables() {
+    for(int i = 0; i < TOTAL_ENTITIES; ++i) delete this->items[i];
+}
+
 GameEngine::GameEngine():timestamp(0),movables(time(NULL)) {
     this->grid = Grid();
     this->blue.base.hp = BASE_HP;
@@ -343,7 +347,7 @@ GameOut GameEngine::get_output(int ship_id) {
     Base blue = this->blue.base;
     Base red = this->red.base;
     PlayerData player_data = player->generate_player_data();
-    Neighbours neighbours = this->grid.getNeighbours(player);
+    Neighbours neighbours = this->grid.get_neighbours(player);
     return GameOut {
         .timestamp = timestamp,
         .blue_hp = blue.hp,

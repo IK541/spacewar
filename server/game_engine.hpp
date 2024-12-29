@@ -7,7 +7,6 @@
 
 #define SPAWN_RADIUS 0.5
 
-// TODO: set appropriate
 #define SHIP_SPEED 5.0
 #define BULLET_SPEED 10.0
 #define ASTEROID_SPEED 1.0
@@ -96,7 +95,6 @@ class Player {
     Player(int player_id, Ship* ship);
     void update_ship();
     void shoot(Movables* movables);
-    // (make new?)
     PlayerData generate_player_data();
 };
 
@@ -108,13 +106,14 @@ class Grid {
     void update_zone(Movables* movables, vec2 where);
     void update_base(Base* base, vec2 where, bool side);
     // NEW
-    Neighbours getNeighbours(Player* player);
+    Neighbours get_neighbours(Player* player);
 };
 
 class Movables {
     public:
     Movable* items[TOTAL_ENTITIES];
     unsigned int seed;
+    // NEW
     Movables(unsigned int seed);
     void move(double dt);
     void add_asteroid(uint16_t id);
@@ -123,7 +122,8 @@ class Movables {
     void update_bullets();
     void respawn(Ship* ship);
     void pull_ships(double dt);
-    // TODO: add destructor (DELETE)
+    // DELETE
+    ~Movables();
 };
 
 // Game Engine

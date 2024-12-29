@@ -20,17 +20,21 @@
 
 #define BUFFER_SIZE 4096
 
+GameState game_state;
+sf::UdpSocket socket;
+
 void resize(sf::Event* event, sf::Vector2f* window_size);
 void set_view(sf::RenderWindow* window, sf::Vector2f window_size, sf::Vector2f center);
 
-void receiver(GameState* game_state, sf::UdpSocket* socket) {
+void receiver() {
     std::size_t size = 0;
     uint8_t buffer[BUFFER_SIZE];
     while(1) {
         sf::IpAddress addr; unsigned short port;
-        socket->receive(buffer, BUFFER_SIZE, size, addr, port);
+        socket.receive(buffer, BUFFER_SIZE, size, addr, port);
         GameOut data = UdpInputTranslator((uint8_t*)buffer, size);
-        game_state->set_game_state(data);
+        game_state.set_game_state(data);
+        delete_GameOut(&data);
     }
 }
 
@@ -41,13 +45,11 @@ int main() {
     window.setFramerateLimit(FPS);
 
     // Drawing
-    GameState* game_state = new GameState;
     Drawer drawer;
 
     // Network
-    sf::UdpSocket* socket = new sf::UdpSocket;
-    socket->bind(CLIENT_PORT);
-    std::thread recv_thread(receiver, game_state, socket);
+    socket.bind(CLIENT_PORT);
+    std::thread recv_thread(receiver);
     recv_thread.detach();
 
     // input
@@ -64,9 +66,9 @@ int main() {
         }
 
         // draw phase
-        WindowData window_data = WindowData{&window,window_size,game_state->get_center()};
-        set_view(&window, window_size, game_state->get_center());
-        drawer.add_all(game_state);
+        WindowData window_data = WindowData{&window,window_size,game_state.get_center()};
+        set_view(&window, window_size, game_state.get_center());
+        drawer.add_all(&game_state);
         window.clear();
         drawer.draw(window_data);
         window.display();
@@ -76,7 +78,7 @@ int main() {
         UserInput user_input = input_collector.collect();
         SendData out_data = input_translator.translate(user_input);
         uint8_t* bytes = UdpOutputTranslator(*(GameIn*)out_data.data);
-        socket->send(bytes, 9, sf::IpAddress(SERVER_ADDR), SERVER_PORT);
+        socket.send(bytes, 9, sf::IpAddress(SERVER_ADDR), SERVER_PORT);
         delete (GameIn*)out_data.data;
         delete [] bytes;
     }

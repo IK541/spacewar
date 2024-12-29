@@ -19,14 +19,14 @@ struct SendData {
     void* data;
 };
 
-// mock definitions
+// mocks
 
 class MockGameState : public GameStateI {
     public:
     bool is_game_running() { return true; }
 };
 
-// objects full declarations
+// objects
 
 class InputCollector {
     private:
@@ -44,6 +44,7 @@ class InputTranslator {
     public:
     InputTranslator(GameStateI* game_state, sf::Window* window);
     void reset_timer();
+    // NEW
     SendData translate(UserInput input);
 };
 

@@ -58,6 +58,8 @@ void Drawer::add_all(DrawDataI* source) {
     for(SpaceObject* object: *data.objects) this->add(object);
     this->blue = data.blue; this->red = data.red;
     this->ammo = data.ammo; this->respawn = data.respawn;
+    for(SpaceObject* obj: *data.objects) delete obj;
+    delete data.objects;
 }
 
 void Drawer::clear() {
@@ -178,9 +180,7 @@ void GameState::set_game_state(GameOut out) {
             this->center.x = object->x;
             this->center.y = object->y;
         }
-        // delete object;
     }
-    // delete out.objects;
 }
 
 bool GameState::is_game_running() {

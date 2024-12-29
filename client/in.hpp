@@ -61,12 +61,14 @@ class Drawer {
     uint16_t ammo;
     uint16_t respawn;
     // NEW
-    void add(SpaceObject* object);
     void add_all(DrawDataI* source);
+    // DELETE
     void clear();
     void draw(WindowData window);
     ~Drawer();
     private:
+    // NEW
+    void add(SpaceObject* object);
     void draw_objects(WindowData window);
     void draw_zones(WindowData window);
     void draw_bases(WindowData window);
@@ -88,8 +90,8 @@ class GameState : public GameStateI, public DrawDataI {
     std::mutex mtx;
     public:
     GameState();
-    // CONSUMES movables
     void set_game_state(GameOut game_out);
+    // NEW
     DrawData get_game_state();
     sf::Vector2f get_center();
     bool is_game_running();
@@ -99,7 +101,6 @@ class GameState : public GameStateI, public DrawDataI {
 };
 
 // NEW
-// NULL on failure
 GameOut UdpInputTranslator(uint8_t* data, int size);
 
 inline sf::Vector2f get_view_size(sf::Vector2f window_size) {
