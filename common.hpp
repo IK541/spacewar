@@ -1,5 +1,6 @@
 #pragma once
-#include <stdint.h>
+#include <cstdint>
+#include <cmath>
 #include <vector>
 
 #define FPS 60
@@ -101,3 +102,6 @@ inline bool get_side(uint16_t id) {
 }
 
 template <typename T> int sgn(T val) { return (T(0) < val) - (val < T(0)); }
+
+// client
+class GameStateI{public: virtual bool is_game_running()=0;};

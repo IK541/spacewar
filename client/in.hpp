@@ -1,9 +1,9 @@
 #pragma once
+
 #include <SFML/Window.hpp>
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <mutex>
-#include <cmath>
 
 #include "../common.hpp"
 
@@ -41,10 +41,6 @@ struct DrawData {
     uint16_t red;
     uint16_t ammo;
     uint16_t respawn;
-};
-class GameStateI {
-    public:
-    virtual bool is_game_running() = 0;
 };
 class DrawDataI {
     public:

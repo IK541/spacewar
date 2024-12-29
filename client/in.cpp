@@ -1,6 +1,6 @@
-#include "draw.hpp"
-#include <cmath>
-#include "cstring"
+#include "in.hpp"
+
+#include <cstring>
 
 Shape::Shape(sf::Vector2f pos, float scale, sf::Color color):
 pos(pos),scale(scale),color(color){}

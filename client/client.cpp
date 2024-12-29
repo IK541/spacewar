@@ -5,8 +5,8 @@
 #include <thread>
 #include <mutex>
 
-#include "user_input.hpp"
-#include "draw.hpp"
+#include "in.hpp"
+#include "out.hpp"
 
 #define WINDOW_SIZE 800
 

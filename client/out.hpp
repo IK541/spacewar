@@ -1,8 +1,8 @@
 #pragma once
+
 #include <SFML/Window.hpp>
-#include <cmath>
-#include <cstdint>
-#include "draw.hpp"
+
+#include "../common.hpp"
 
 // structs
 

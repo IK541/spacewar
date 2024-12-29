@@ -1,4 +1,5 @@
-#include "user_input.hpp"
+#include "out.hpp"
+
 #include <cstring>
 
 InputCollector::InputCollector(sf::Window* window):window(window){};
