@@ -58,9 +58,9 @@ int main() {
     while (1) {
         game_engine.update_input(SHIP_ID, input_state->get_input());
         game_engine.update_physics(1.0/FPS);
-        Output out = game_engine.get_output(SHIP_ID);
+        GameOut out = game_engine.get_output(SHIP_ID);
         uint8_t* bytes = UdpOutputTranslator(out);
-        sendto(sfd, bytes, 18+6*out.neighbours.count, 0, (sockaddr*) &caddr, caddr_size);
+        sendto(sfd, bytes, 18+6*out.movables_count, 0, (sockaddr*) &caddr, caddr_size);
         delete bytes;
         usleep(1000000/FPS);
     }

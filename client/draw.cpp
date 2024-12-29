@@ -57,7 +57,6 @@ void Drawer::addAll(DrawDataI* source) {
     std::vector<SpaceObject*> data;
     source->get_space_objects(&data);
     for(SpaceObject* object: data) this->add(object);
-    for(SpaceObject* object: data) delete object;
 }
 
 void Drawer::clear() {
@@ -72,6 +71,11 @@ void Drawer::draw(sf::RenderWindow* window) {
 Drawer::~Drawer() { this->clear(); }
 
 
+
+GameState::GameState():timestamp(0) {
+    memset(this->objects_present,0,TOTAL_ENTITIES*sizeof(bool));
+    memset(this->objects,0,TOTAL_ENTITIES*sizeof(SpaceObject));
+}
 
 void GameState::get_space_objects(std::vector<SpaceObject*>* objects) {
     std::lock_guard<std::mutex> lock(this->mtx);
@@ -102,7 +106,7 @@ bool GameState::is_game_running() {
     return true;
 }
 
-UdpRecvData* UdpInputTranslator(uint8_t* data, int size) {
+GameOut* UdpInputTranslator(uint8_t* data, int size) {
     if(size < 18) return NULL;
     uint32_t timestamp = *((uint32_t*)data);
     uint16_t blue_hp = *((uint16_t*)(data+4));
@@ -112,19 +116,19 @@ UdpRecvData* UdpInputTranslator(uint8_t* data, int size) {
     uint16_t rearm = *((uint16_t*)(data+12));
     uint16_t respawn = *((uint16_t*)(data+14));
     uint8_t ship_id = *((uint8_t*)(data+16));
-    uint16_t movables_count = (size-18)/6;
+    uint8_t movables_count = (size-18)/6;
     std::vector<SpaceObject*>* objects = new std::vector<SpaceObject*>;
     for(int i = 0; i < movables_count; ++i) {
         uint8_t id = *((uint8_t*)(data+18+6*i));
         uint16_t x0 = *((uint16_t*)(data+18+6*i+1));
         uint16_t y0 = *((uint16_t*)(data+18+6*i+3));
-        uint8_t data_val = *((uint8_t*)(data+18+6*i+5));
+        uint8_t angle0 = *((uint8_t*)(data+18+6*i+5));
         double x = 2.0 * (double) x0 / UINT16_MAX * TOTAL_RADIUS - TOTAL_RADIUS;
         double y = 2.0 * (double) y0 / UINT16_MAX * TOTAL_RADIUS - TOTAL_RADIUS;
-        double angle = (double)data_val / 256.0 * 2.0 * M_PI;
+        double angle = (double)angle0 / 256.0 * 2.0 * M_PI;
         objects->push_back(new SpaceObject{id,x,y,angle});
     }
-    return new UdpRecvData {
+    return new GameOut {
         .timestamp = timestamp,
         .blue_hp = blue_hp,
         .red_hp = red_hp,

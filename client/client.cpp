@@ -28,7 +28,7 @@ void receiver(GameState* game_state, sf::UdpSocket* socket) {
     while(1) {
         sf::IpAddress addr; unsigned short port;
         socket->receive(buffer, BUFFER_SIZE, size, addr, port);
-        UdpRecvData* data = UdpInputTranslator((uint8_t*)buffer, size);
+        GameOut* data = UdpInputTranslator((uint8_t*)buffer, size);
         game_state->set_space_objects(data->timestamp, data->objects);
     }
 }

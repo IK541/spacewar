@@ -12,6 +12,6 @@ struct CompressedMovable {
 #pragma pack(pop)
 
 // NEW
-uint8_t* UdpOutputTranslator(Output output);
+uint8_t* UdpOutputTranslator(GameOut output);
 
 Input UdpInputTranslator(uint8_t* input);

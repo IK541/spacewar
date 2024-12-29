@@ -39,48 +39,7 @@
 
 #define EPSILON 0.01
 
-// Movables - TODO move to game engine
-
-struct vec2 {
-    double x;
-    double y;
-};
-
-class Movable {
-    public:
-    uint8_t id;
-    vec2 position;
-    vec2 speed;
-    Movable(uint16_t id, vec2 position, vec2 speed):
-    id(id),position(position),speed(speed){}
-    Movable(){};
-};
-
-class Asteroid : public Movable {
-    public:
-    Asteroid(uint16_t id, vec2 position, vec2 speed):
-    Movable(id, position, speed){}
-};
-
-class Ship : public Movable {
-    public:
-    double direction;
-    void* player;
-    bool side;
-    Ship(uint16_t id, vec2 position, vec2 speed, double direction, void* player, bool side):
-    Movable(id, position, speed),direction(direction),player(player),side(side){}
-};
-
-class Bullet : public Movable {
-    public:
-    double direction;
-    uint16_t lifetime;
-    bool side;
-    Bullet(uint16_t id, vec2 position, vec2 speed, double direction, uint16_t lifetime, bool side):
-    Movable(id, position, speed),direction(direction),lifetime(lifetime),side(side){}
-};
-
-// Space object (movable outside game engine) - TODO
+// Space object
 
 struct SpaceObject {
     uint8_t id;
@@ -99,29 +58,17 @@ struct Input {
 
 // Output
 
-struct PlayerData {
+struct GameOut {
+    uint32_t timestamp;
+    uint16_t blue_hp;
+    uint16_t red_hp;
     uint16_t ammo;
     uint16_t reload;
     uint16_t rearm;
     uint16_t respawn;
     uint8_t ship_id;
-};
-
-struct Neighbours {
-    uint8_t count;
-    std::vector<Movable*>* movables;
-};
-
-struct Base {
-    uint16_t hp;
-};
-
-struct Output {
-    uint32_t timestamp;
-    Base blue;
-    Base red;
-    PlayerData player_data;
-    Neighbours neighbours;
+    uint8_t movables_count;
+    std::vector<SpaceObject*>* objects;
 };
 
 // shared functions

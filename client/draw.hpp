@@ -56,6 +56,7 @@ class GameState : public GameStateI, public DrawDataI {
     SpaceObject objects[TOTAL_ENTITIES]{};
     std::mutex mtx;
     public:
+    GameState();
     // NEW
     void get_space_objects(std::vector<SpaceObject*>* objects);
     // CONSUMES movables
@@ -63,19 +64,6 @@ class GameState : public GameStateI, public DrawDataI {
     bool is_game_running();
 };
 
-struct UdpRecvData {
-    uint32_t timestamp;
-    uint16_t blue_hp;
-    uint16_t red_hp;
-    uint16_t ammo;
-    uint16_t reload;
-    uint16_t rearm;
-    uint16_t respawn;
-    uint8_t ship_id;
-    uint16_t movables_count;
-    std::vector<SpaceObject*>* objects;
-};
-
 // NEW
 // NULL on failure
-UdpRecvData* UdpInputTranslator(uint8_t* data, int size);
+GameOut* UdpInputTranslator(uint8_t* data, int size);

@@ -150,13 +150,16 @@ void Grid::update_base(Base* base, vec2 where, bool side) {
 }
 
 Neighbours Grid::getNeighbours(Player* player) {
-    std::vector<Movable*>* movables = new std::vector<Movable*>;
+    std::vector<SpaceObject*>* movables = new std::vector<SpaceObject*>;
     double sy = player->ship->position.y;
     double sx = player->ship->position.x;
     for(int y = TOTAL_RADIUS-sy-SIGHT_LIMIT-1; y <= TOTAL_RADIUS-sx+SIGHT_LIMIT; ++y)
         for(int x = TOTAL_RADIUS-sx-SIGHT_LIMIT-1; x <= TOTAL_RADIUS-sx+SIGHT_LIMIT; ++x)
-            CHECK_XY(x,y) for(Movable* movable: this->fields[y*GRID_SIZE+x])
-                movables->push_back(movable);
+            CHECK_XY(x,y) for(Movable* movable: this->fields[y*GRID_SIZE+x]) {
+                double angle = get_type(movable->id) == TYPE_SHIP ? ((Ship*)movable)->direction :
+                    get_type(movable->id) == TYPE_BULLET ? ((Bullet*)movable)->direction : 0.0;
+                movables->push_back(new SpaceObject{movable->id, movable->position.x, movable->position.y, angle});
+            }
     uint8_t count = (uint8_t)movables->size();
     return Neighbours {
         .count = count,
@@ -311,7 +314,7 @@ void GameEngine::update_physics(double dt) {
     this->grid.update_collisions(&this->movables);
     this->grid.update_zone(&this->movables,vec2{0,-BASE_DIST});
     this->grid.update_zone(&this->movables,vec2{0,BASE_DIST});
-    // this->grid.update_base(&this->blue.base,vec2{0,-BASE_DIST},true);
+    this->grid.update_base(&this->blue.base,vec2{0,-BASE_DIST},true);
     this->grid.update_base(&this->red.base,vec2{0,BASE_DIST},false);
 }
 
@@ -320,19 +323,24 @@ void GameEngine::update_input(int ship_id, Input input) {
     player->last_input = input;
 }
 
-Output GameEngine::get_output(int ship_id) {
+GameOut GameEngine::get_output(int ship_id) {
     Player* player = get_player(ship_id);
     uint32_t timestamp = this->timestamp;
     Base blue = this->blue.base;
     Base red = this->red.base;
-    PlayerData playter_data = player->generate_player_data();
+    PlayerData player_data = player->generate_player_data();
     Neighbours neighbours = this->grid.getNeighbours(player);
-    return Output {
+    return GameOut {
         .timestamp = timestamp,
-        .blue = blue,
-        .red = red,
-        .player_data = playter_data,
-        .neighbours = neighbours
+        .blue_hp = blue.hp,
+        .red_hp = red.hp,
+        .ammo = player_data.ammo,
+        .reload = player_data.reload,
+        .rearm = player_data.rearm,
+        .respawn = player_data.respawn,
+        .ship_id = player_data.ship_id,
+        .movables_count = neighbours.count,
+        .objects = neighbours.movables
     };
 }
 
