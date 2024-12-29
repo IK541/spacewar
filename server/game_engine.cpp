@@ -6,7 +6,7 @@
 
 Player::Player(int player_id, Ship* ship):id(player_id),ship(ship),
 ammo(MAX_AMMO),reload(0),rearm(0),respawn(RESPAWN_TIME),current_bullet(0),
-last_input(Input{ship->id<RED_TEAM_BEGIN?-M_PI_2:M_PI,false,false}){
+last_input(Input{ship->id<RED_TEAM_BEGIN?M_PI_2:-M_PI_2,false,false}){
     ship->player = this;
 }
 
@@ -192,11 +192,11 @@ Movables::Movables(unsigned int seed) {
     }
     // asteroids
     for(int i = ASTEROIDS_BEGIN; i <= TOTAL_ENTITIES; ++i) {
-        double radius = 0.5f * GRID_SIZE * sqrt((double) rand_r(&seed) / (double) RAND_MAX);
+        double radius = TOTAL_RADIUS * sqrt((double) rand_r(&seed) / (double) RAND_MAX);
         double angle = 2 * M_PI * ((double) rand_r(&seed) / (double) RAND_MAX);
         double pos_x = cos(angle) * radius;
         double pos_y = sin(angle) * radius;
-        double speed_angle = sqrt((double) rand_r(&seed) / (double) RAND_MAX);
+        double speed_angle = 2 * M_PI * ((double) rand_r(&seed) / (double) RAND_MAX);
         double speed_x = ASTEROID_SPEED * cos(speed_angle);
         double speed_y = ASTEROID_SPEED * sin(speed_angle);
         items[i-1] = new Asteroid(i,  vec2{pos_x, pos_y}, vec2{speed_x, speed_y});
@@ -211,21 +211,23 @@ void Movables::move(double dt) {
     }
 }
 
+#define RAD 5
 void Movables::add_asteroid(uint16_t id) {
     // TODO: do not generate no fly only asteroids
     double angle = 2 * M_PI * ((double) rand_r(&this->seed) / (double) RAND_MAX);
-    double offset = 2 * TOTAL_RADIUS * ((double) rand_r(&this->seed) / (double) RAND_MAX) - TOTAL_RADIUS;
-    double position_x = offset * cos(angle) + sqrt(TOTAL_RADIUS*TOTAL_RADIUS - offset*offset) * sin(angle);
-    double position_y = sqrt(TOTAL_RADIUS*TOTAL_RADIUS - offset*offset) * cos(angle) - offset * sin(angle);
-    double speed_x = - ASTEROID_SPEED * cos(angle);
-    double speed_y = - ASTEROID_SPEED * sin(angle);
+    double offset = 2 * BARRIER_RADIUS * ((double) rand_r(&this->seed) / (double) RAND_MAX) - BARRIER_RADIUS;
+    double cooffset = sqrt(TOTAL_RADIUS*TOTAL_RADIUS - offset*offset);
+    double position_x = offset * cos(angle) + cooffset * sin(angle);
+    double position_y = cooffset * cos(angle) - offset * sin(angle);
+    double speed_x = - ASTEROID_SPEED * sin(angle);
+    double speed_y = - ASTEROID_SPEED * cos(angle);
     items[id-1]->position = vec2{position_x, position_y};
+    // items[id-1]->position = vec2{0, 0};
     items[id-1]->speed = vec2{speed_x, speed_y};
 }
 
 void Movables::shoot(Player* player) {
     uint16_t id = BLUE_BULLETS_BEGIN + (player->ship->id - 1) * BULLETS_PER_PLAYER + player->current_bullet;
-    // player->current_bullet = (player->current_bullet + 1) % BULLETS_PER_PLAYER;
     Bullet* bullet = (Bullet*) this->items[id-1];
     bullet->position = player->ship->position;
     bullet->position.x += (SHIP_SIZE+BULLET_SIZE+EPSILON)*cos(player->ship->direction);
