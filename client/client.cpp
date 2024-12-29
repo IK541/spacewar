@@ -20,7 +20,8 @@
 
 #define BUFFER_SIZE 4096
 
-void resize_window(sf::RenderWindow* window, sf::Event* event, float sight_limit);
+void resize_window(sf::RenderWindow* window, sf::Event* event, sf::Vector2f* window_size);
+void set_view(sf::RenderWindow* window, sf::Vector2f window_size, sf::Vector2f center);
 
 void receiver(GameState* game_state, sf::UdpSocket* socket) {
     std::size_t size = 0;
@@ -28,14 +29,15 @@ void receiver(GameState* game_state, sf::UdpSocket* socket) {
     while(1) {
         sf::IpAddress addr; unsigned short port;
         socket->receive(buffer, BUFFER_SIZE, size, addr, port);
-        GameOut* data = UdpInputTranslator((uint8_t*)buffer, size);
-        game_state->set_space_objects(data->timestamp, data->objects);
+        GameOut data = UdpInputTranslator((uint8_t*)buffer, size);
+        game_state->set_game_state(data);
     }
 }
 
 int main() {
     // Window
-    sf::RenderWindow window(sf::VideoMode(WINDOW_SIZE, WINDOW_SIZE), "Spacewar");
+    sf::Vector2f window_size = sf::Vector2f(WINDOW_SIZE, WINDOW_SIZE);
+    sf::RenderWindow window(sf::VideoMode((unsigned)window_size.x, (unsigned)window_size.y), "Spacewar");
     window.setFramerateLimit(FPS);
 
     // Drawing
@@ -58,10 +60,11 @@ int main() {
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) window.close();
-            if (event.type == sf::Event::Resized) resize_window(&window, &event, SIGHT_LIMIT);
+            if (event.type == sf::Event::Resized) resize_window(&window, &event, &window_size);
         }
 
         // draw phase
+        set_view(&window, window_size, game_state->get_center());
         drawer.addAll(game_state);
         window.clear();
         drawer.draw(&window);
@@ -80,9 +83,12 @@ int main() {
     return 0;
 }
 
-void resize_window(sf::RenderWindow* window, sf::Event* event, float sight_limit) {
-    sf::Vector2f window_size = sf::Vector2f(sf::Vector2u(event->size.width, event->size.height));
-    float vx = SIGHT_LIMIT/sqrtf(1+(window_size.y*window_size.y)/(window_size.x*window_size.x));
+void resize_window(sf::RenderWindow* window, sf::Event* event, sf::Vector2f* window_size) {
+    *window_size = sf::Vector2f(sf::Vector2u(event->size.width, event->size.height));
+}
+
+void set_view(sf::RenderWindow* window, sf::Vector2f window_size, sf::Vector2f center) {
+    float vx = SIGHT_LIMIT/sqrtf(1+(window_size.x*window_size.y)/(window_size.x*window_size.x));
     float vy = SIGHT_LIMIT/sqrtf(1+(window_size.x*window_size.x)/(window_size.y*window_size.y));
-    window->setView(sf::View(sf::FloatRect(-vx, -vy, 2*vx, 2*vy)));
+    window->setView(sf::View(sf::FloatRect(-vx+center.x, -vy+center.y, 2*vx, 2*vy)));
 }

@@ -164,10 +164,10 @@ void Grid::update_base(Base* base, vec2 where, bool side) {
 
 Neighbours Grid::getNeighbours(Player* player) {
     std::vector<SpaceObject*>* movables = new std::vector<SpaceObject*>;
-    double sy = player->ship->position.y;
-    double sx = player->ship->position.x;
-    for(int y = TOTAL_RADIUS-sy-SIGHT_LIMIT-1; y <= TOTAL_RADIUS-sx+SIGHT_LIMIT; ++y)
-        for(int x = TOTAL_RADIUS-sx-SIGHT_LIMIT-1; x <= TOTAL_RADIUS-sx+SIGHT_LIMIT; ++x)
+    int sy = (int)player->ship->position.y;
+    int sx = (int)player->ship->position.x;
+    for(int y = TOTAL_RADIUS+sy-SIGHT_LIMIT-1; y <= TOTAL_RADIUS+sy+SIGHT_LIMIT; ++y)
+        for(int x = TOTAL_RADIUS+sx-SIGHT_LIMIT-1; x <= TOTAL_RADIUS+sx+SIGHT_LIMIT; ++x)
             CHECK_XY(x,y) for(Movable* movable: this->fields[y*GRID_SIZE+x]) {
                 double angle = get_type(movable->id) == TYPE_SHIP ? ((Ship*)movable)->angle :
                     get_type(movable->id) == TYPE_BULLET ? ((Bullet*)movable)->angle : 0.0;

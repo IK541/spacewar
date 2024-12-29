@@ -72,7 +72,7 @@ Drawer::~Drawer() { this->clear(); }
 
 
 
-GameState::GameState():timestamp(0) {
+GameState::GameState():timestamp(0),ammo(0),respawn(0),center(sf::Vector2f(0.f,0.f)) {
     memset(this->objects_present,0,TOTAL_ENTITIES*sizeof(bool));
     memset(this->objects,0,TOTAL_ENTITIES*sizeof(SpaceObject));
 }
@@ -87,18 +87,30 @@ void GameState::get_space_objects(std::vector<SpaceObject*>* objects) {
     }
 }
 
-void GameState::set_space_objects(uint32_t timestamp, std::vector<SpaceObject*>* objects) {
+sf::Vector2f GameState::get_center() {
     std::lock_guard<std::mutex> lock(this->mtx);
-    if(this->timestamp > timestamp) return;
-    this->timestamp = timestamp;
+    return this->center;
+}
+
+void GameState::set_game_state(GameOut out) {
+    std::lock_guard<std::mutex> lock(this->mtx);
+    if(this->timestamp > out.timestamp) return;
+    this->timestamp = out.timestamp;
+    this->ammo = out.ammo;
+    this->respawn = out.respawn;
+    uint8_t ship_id = out.ship_id;
     memset(this->objects_present, false, TOTAL_ENTITIES*sizeof(bool));
-    for(SpaceObject* object: *objects) {
+    for(SpaceObject* object: *out.objects) {
         int i = object->id-1;
         this->objects_present[i] = true;
         this->objects[i] = *object;
-        // delete movable;
+        if(object->id == ship_id) {
+            this->center.x = object->x;
+            this->center.y = object->y;
+        }
+        // delete object;
     }
-    // delete movables;
+    // delete out.objects;
 }
 
 bool GameState::is_game_running() {
@@ -106,8 +118,7 @@ bool GameState::is_game_running() {
     return true;
 }
 
-GameOut* UdpInputTranslator(uint8_t* data, int size) {
-    if(size < 18) return NULL;
+GameOut UdpInputTranslator(uint8_t* data, int size) {
     uint32_t timestamp = *((uint32_t*)data);
     uint16_t blue_hp = *((uint16_t*)(data+4));
     uint16_t red_hp = *((uint16_t*)(data+6));
@@ -128,7 +139,7 @@ GameOut* UdpInputTranslator(uint8_t* data, int size) {
         double angle = (double)angle0 / 256.0 * 2.0 * M_PI;
         objects->push_back(new SpaceObject{id,x,y,angle});
     }
-    return new GameOut {
+    return GameOut {
         .timestamp = timestamp,
         .blue_hp = blue_hp,
         .red_hp = red_hp,
