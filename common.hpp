@@ -52,7 +52,7 @@ struct SpaceObject {
 
 struct GameIn {
     uint32_t timestamp;
-    float direction;
+    float angle;
     bool shoot;
     bool engine_on;
 };
@@ -93,3 +93,5 @@ inline bool get_side(uint16_t id) {
     if(id >= RED_BULLETS_BEGIN && id < ASTEROIDS_BEGIN) return 1;
     return 0;
 }
+
+template <typename T> int sgn(T val) { return (T(0) < val) - (val < T(0)); }

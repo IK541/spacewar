@@ -14,15 +14,28 @@ Player::Player():id(0),ship(NULL),
 ammo(MAX_AMMO),reload(0),rearm(0),respawn(RESPAWN_TIME),current_bullet(0),
 last_input(GameIn{0,0.f,false,false}){}
 
+
+inline double reduce_speed(double x) {
+    double s = sgn(x);
+    if(fabs(x) < 0.5) return x;
+    if(fabs(x) > 1.5) return s;
+    return 0.25*s + 0.5 * x;
+    return s - 0.5 * s * (x - 1.5 * s) * (x - 1.5 * s);
+}
 void Player::update_ship() {
     if(this->respawn) {--this->respawn; return;}
-    double angle = -this->last_input.direction;
-    double ship_speed = this->last_input.engine_on ? SHIP_SPEED : 0.0;
-    double vx = ship_speed * cos(angle);
-    double vy = ship_speed * sin(angle);
-    this->ship->speed.x = vx;
-    this->ship->speed.y = vy;
-    this->ship->direction = angle;
+    double angle = -this->last_input.angle;
+    double da = SHIP_ROTATION * (sin(angle-this->ship->angle));
+    double ship_acceleration = this->last_input.engine_on ? SHIP_ACCELERATION : 0.0;
+    double vx = this->ship->speed.x + ship_acceleration * cos(this->ship->angle);
+    double vy = this->ship->speed.y + ship_acceleration * sin(this->ship->angle);
+    double v = sqrt(vx*vx+vy*vy);
+    double v_coef = SHIP_SPEED * reduce_speed(v/SHIP_SPEED);
+    double vxx = v == 0.0 ? 0.0 : vx/v;
+    double vyy = v == 0.0 ? 0.0 : vy/v;
+    this->ship->speed.x = vxx * v_coef;
+    this->ship->speed.y = vyy * v_coef;
+    this->ship->angle = fmod(this->ship->angle+da+M_PI,2*M_PI)-M_PI;
 }
 
 void Player::shoot(Movables* movables) {
@@ -156,8 +169,8 @@ Neighbours Grid::getNeighbours(Player* player) {
     for(int y = TOTAL_RADIUS-sy-SIGHT_LIMIT-1; y <= TOTAL_RADIUS-sx+SIGHT_LIMIT; ++y)
         for(int x = TOTAL_RADIUS-sx-SIGHT_LIMIT-1; x <= TOTAL_RADIUS-sx+SIGHT_LIMIT; ++x)
             CHECK_XY(x,y) for(Movable* movable: this->fields[y*GRID_SIZE+x]) {
-                double angle = get_type(movable->id) == TYPE_SHIP ? ((Ship*)movable)->direction :
-                    get_type(movable->id) == TYPE_BULLET ? ((Bullet*)movable)->direction : 0.0;
+                double angle = get_type(movable->id) == TYPE_SHIP ? ((Ship*)movable)->angle :
+                    get_type(movable->id) == TYPE_BULLET ? ((Bullet*)movable)->angle : 0.0;
                 movables->push_back(new SpaceObject{movable->id, movable->position.x, movable->position.y, angle});
             }
     uint8_t count = (uint8_t)movables->size();
@@ -228,12 +241,12 @@ void Movables::shoot(Player* player) {
     uint16_t id = BLUE_BULLETS_BEGIN + (player->ship->id - 1) * BULLETS_PER_PLAYER + player->current_bullet;
     Bullet* bullet = (Bullet*) this->items[id-1];
     bullet->position = player->ship->position;
-    bullet->position.x += (SHIP_SIZE+BULLET_SIZE+EPSILON)*cos(player->ship->direction);
-    bullet->position.y += (SHIP_SIZE+BULLET_SIZE+EPSILON)*sin(player->ship->direction);
+    bullet->position.x += (SHIP_SIZE+BULLET_SIZE+EPSILON)*cos(player->ship->angle);
+    bullet->position.y += (SHIP_SIZE+BULLET_SIZE+EPSILON)*sin(player->ship->angle);
     bullet->speed = player->ship->speed;
-    bullet->speed.x += BULLET_SPEED * cos(player->ship->direction);
-    bullet->speed.y += BULLET_SPEED * sin(player->ship->direction);
-    bullet->direction = player->ship->direction;    
+    bullet->speed.x += BULLET_SPEED * cos(player->ship->angle);
+    bullet->speed.y += BULLET_SPEED * sin(player->ship->angle);
+    bullet->angle = player->ship->angle;    
     bullet->lifetime = BULLET_LIFETIME;
 }
 
@@ -252,7 +265,7 @@ void Movables::update_bullets() {
 }
 
 void Movables::respawn(Ship* ship) {
-    ship->direction = ship->id < RED_TEAM_BEGIN ? -M_PI_2 : M_PI_2;
+    ship->angle = ship->id < RED_TEAM_BEGIN ? -M_PI_2 : M_PI_2;
     double angle = ((double) ship->id / (double) PLAYERS_PER_TEAM) * 2.0 * M_PI;
     ship->position = ship->id < RED_TEAM_BEGIN ?
         vec2{ SPAWN_RADIUS*cos(angle), BASE_DIST+SPAWN_RADIUS*sin(angle) } :

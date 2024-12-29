@@ -25,7 +25,7 @@ SendData InputTranslator::translate(UserInput input) {
         sf::Vector2f mouse_position = sf::Vector2f(input.pos) - 0.5f * sf::Vector2f(this->window->getSize());
         result.data = new GameIn {
             .timestamp = this->timer++,
-            .direction = atan2f(-mouse_position.y, mouse_position.x),
+            .angle = atan2f(-mouse_position.y, mouse_position.x),
             .shoot = input.lmb,
             .engine_on = input.rmb
         };
@@ -37,7 +37,7 @@ uint8_t* UdpOutputTranslator(GameIn data) {
     uint8_t* bytes = new uint8_t[10];
     uint8_t flags = data.shoot << 1 | data.engine_on;
     memcpy(bytes, &data.timestamp, 4);
-    memcpy(bytes+4, &data.direction, 4);
+    memcpy(bytes+4, &data.angle, 4);
     memcpy(bytes+8, &flags, 1);
     return bytes;
 }

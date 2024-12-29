@@ -8,9 +8,12 @@
 #define SPAWN_RADIUS 0.5
 
 // TODO: set appropriate
-#define SHIP_SPEED 2.0
+#define SHIP_SPEED 5.0
 #define BULLET_SPEED 5.0
 #define ASTEROID_SPEED 1.0
+
+#define SHIP_ROTATION 0.1
+#define SHIP_ACCELERATION 0.1
 
 #define MAX_AMMO 20
 #define BULLET_LIFETIME 50
@@ -50,20 +53,20 @@ class Asteroid : public Movable {
 
 class Ship : public Movable {
     public:
-    double direction;
+    double angle;
     Player* player;
     bool side;
-    Ship(uint16_t id, vec2 position, vec2 speed, double direction, Player* player, bool side):
-    Movable(id, position, speed),direction(direction),player(player),side(side){}
+    Ship(uint16_t id, vec2 position, vec2 speed, double angle, Player* player, bool side):
+    Movable(id, position, speed),angle(angle),player(player),side(side){}
 };
 
 class Bullet : public Movable {
     public:
-    double direction;
+    double angle;
     uint16_t lifetime;
     bool side;
-    Bullet(uint16_t id, vec2 position, vec2 speed, double direction, uint16_t lifetime, bool side):
-    Movable(id, position, speed),direction(direction),lifetime(lifetime),side(side){}
+    Bullet(uint16_t id, vec2 position, vec2 speed, double angle, uint16_t lifetime, bool side):
+    Movable(id, position, speed),angle(angle),lifetime(lifetime),side(side){}
 };
 
 // output

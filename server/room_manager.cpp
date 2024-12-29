@@ -15,12 +15,12 @@ uint8_t* UdpOutputTranslator(GameOut output) {
     memcpy(bytes+pos, &output.ship_id, sizeof(output.ship_id)); pos += sizeof(output.ship_id);
     memcpy(bytes+pos, &output.movables_count, sizeof(output.movables_count)); pos += sizeof(output.movables_count);
     for(SpaceObject* movable: *output.objects) {
-        double direction = movable->angle;
+        double angle = movable->angle;
         CompressedMovable compressed_movable = CompressedMovable{
             .id = movable->id,
             .x = (uint16_t)((movable->x + TOTAL_RADIUS) / GRID_SIZE * UINT16_MAX),
             .y = (uint16_t)((movable->y + TOTAL_RADIUS) / GRID_SIZE * UINT16_MAX),
-            .direction = (uint8_t)(fmod(direction+2*M_PI,2*M_PI)/(2*M_PI)*UINT8_MAX)
+            .angle = (uint8_t)(fmod(angle+2*M_PI,2*M_PI)/(2*M_PI)*UINT8_MAX)
         };
         memcpy(bytes+pos, &compressed_movable, sizeof(CompressedMovable));
         pos += 6;
@@ -32,7 +32,7 @@ uint8_t* UdpOutputTranslator(GameOut output) {
 GameIn UdpInputTranslator(uint8_t* input) {
     return GameIn {
         .timestamp = *(uint32_t*)(input),
-        .direction = *(float*)(input+4),
+        .angle = *(float*)(input+4),
         .shoot = (bool)(*(input+8) & 0x02),
         .engine_on = (bool)(*(input+8) & 0x01)
     };
