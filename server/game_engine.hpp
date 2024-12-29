@@ -9,19 +9,11 @@
 
 // TODO: set appropriate
 #define SHIP_SPEED 5.0
-#define BULLET_SPEED 5.0
+#define BULLET_SPEED 10.0
 #define ASTEROID_SPEED 1.0
 
 #define SHIP_ROTATION 0.1
 #define SHIP_ACCELERATION 0.1
-
-#define MAX_AMMO 20
-#define BULLET_LIFETIME 50
-#define RESPAWN_TIME (5*FPS)
-#define REARM_TIME (FPS/10)
-#define RELOAD_TIME (FPS/4) // RELOAD_TIME > BULLET_LIFETIME / BULLETS_PER_PLAYER
-
-#define BASE_HP 200
 
 // predeclared
 class Player;

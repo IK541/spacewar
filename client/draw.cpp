@@ -2,14 +2,14 @@
 #include <cmath>
 #include "cstring"
 
-Shape::Shape(sf::Vector2f pos, float scale, float angle, sf::Color color):
-pos(pos),scale(scale),angle(angle),color(color){}
+Shape::Shape(sf::Vector2f pos, float scale, sf::Color color):
+pos(pos),scale(scale),color(color){}
 
-Triangle::Triangle(sf::Vector2f pos, float scale, float angle, sf::Color color):
-Shape(pos,scale,angle,color){}
+Triangle::Triangle(sf::Vector2f pos, float scale, sf::Color color, float angle):
+Shape(pos,scale,color),angle(angle){}
 
 Circle::Circle(sf::Vector2f pos, float scale, sf::Color color):
-Shape(pos,scale,0.0,color){}
+Shape(pos,scale,color){}
 
 void Circle::draw(sf::RenderWindow* window) {
     sf::CircleShape shape(this->scale);
@@ -37,8 +37,8 @@ void Drawer::add(SpaceObject* object) {
     if(type==TYPE_SHIP) shape = new Triangle(
         sf::Vector2f(object->x,object->y),
         SHIP_SIZE,
-        object->angle,
-        sf::Color(side?255:0,0,side?0:255,255)
+        sf::Color(side?255:0,0,side?0:255,255),
+        object->angle
     );
     if(type==TYPE_BULLET) shape = new Circle(
         sf::Vector2f(object->x,object->y),
@@ -68,12 +68,29 @@ void Drawer::draw(sf::RenderWindow* window) {
     for(Shape* shape: this->shapes) shape->draw(window);
 }
 
-void Drawer::draw_bases(sf::RenderWindow* window) {
+void draw_bases(sf::RenderWindow* window) {
     Circle blue_zone(sf::Vector2f(0,BASE_DIST),BASE_ZONE_RADIUS,sf::Color(0,0,127,63)); blue_zone.draw(window);
     Circle red_zone(sf::Vector2f(0,-BASE_DIST),BASE_ZONE_RADIUS,sf::Color(127,0,0,63)); red_zone.draw(window);
     Circle blue_base(sf::Vector2f(0,BASE_DIST),BASE_RADIUS,sf::Color(0,0,127)); blue_base.draw(window);
     Circle red_base(sf::Vector2f(0,-BASE_DIST),BASE_RADIUS,sf::Color(127,0,0)); red_base.draw(window);
 }
+
+void draw_hp(sf::RenderWindow* window, Bases bases, WindowData window_data) {
+    sf::Vector2f v = get_view_size(window_data.windows_size);
+
+    float blue_len = 2.f * bases.blue / BASE_HP * v.x;
+    sf::RectangleShape blue_bar = sf::RectangleShape(sf::Vector2f(blue_len, HP_BAR_WIDTH));
+    blue_bar.move(window_data.center+v-sf::Vector2f(blue_len,HP_BAR_WIDTH));
+    blue_bar.setFillColor(sf::Color(0,0,255));
+    window->draw(blue_bar);
+
+    float red_len = 2.f * bases.red / BASE_HP * v.x;
+    sf::RectangleShape red_bar = sf::RectangleShape(sf::Vector2f(red_len, HP_BAR_WIDTH));
+    red_bar.move(window_data.center-v);
+    red_bar.setFillColor(sf::Color(255,0,0));
+    window->draw(red_bar);
+}
+
 
 Drawer::~Drawer() { this->clear(); }
 
@@ -99,10 +116,17 @@ sf::Vector2f GameState::get_center() {
     return this->center;
 }
 
+Bases GameState::get_bases() {
+    std::lock_guard<std::mutex> lock(this->mtx);
+    return Bases {this->blue_hp, this->red_hp};
+}
+
 void GameState::set_game_state(GameOut out) {
     std::lock_guard<std::mutex> lock(this->mtx);
     if(this->timestamp > out.timestamp) return;
     this->timestamp = out.timestamp;
+    this->blue_hp = out.blue_hp;
+    this->red_hp = out.red_hp;
     this->ammo = out.ammo;
     this->respawn = out.respawn;
     uint8_t ship_id = out.ship_id;

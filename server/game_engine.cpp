@@ -325,10 +325,10 @@ void GameEngine::update_physics(double dt) {
     this->movables.update_bullets();
     this->grid.update_state(&this->movables);
     this->grid.update_collisions(&this->movables);
-    this->grid.update_zone(&this->movables,vec2{0,-BASE_DIST});
     this->grid.update_zone(&this->movables,vec2{0,BASE_DIST});
-    this->grid.update_base(&this->blue.base,vec2{0,-BASE_DIST},true);
-    this->grid.update_base(&this->red.base,vec2{0,BASE_DIST},false);
+    this->grid.update_zone(&this->movables,vec2{0,-BASE_DIST});
+    this->grid.update_base(&this->blue.base,vec2{0,BASE_DIST},false);
+    this->grid.update_base(&this->red.base,vec2{0,-BASE_DIST},true);
 }
 
 void GameEngine::update_input(int ship_id, GameIn input) {

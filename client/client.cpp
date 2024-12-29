@@ -20,7 +20,7 @@
 
 #define BUFFER_SIZE 4096
 
-void resize_window(sf::RenderWindow* window, sf::Event* event, sf::Vector2f* window_size);
+void resize(sf::Event* event, sf::Vector2f* window_size);
 void set_view(sf::RenderWindow* window, sf::Vector2f window_size, sf::Vector2f center);
 
 void receiver(GameState* game_state, sf::UdpSocket* socket) {
@@ -60,15 +60,16 @@ int main() {
         sf::Event event;
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) window.close();
-            if (event.type == sf::Event::Resized) resize_window(&window, &event, &window_size);
+            if (event.type == sf::Event::Resized) resize(&event, &window_size);
         }
 
         // draw phase
         set_view(&window, window_size, game_state->get_center());
         drawer.add_all(game_state);
         window.clear();
-        drawer.draw_bases(&window);
+        draw_bases(&window);
         drawer.draw(&window);
+        draw_hp(&window, game_state->get_bases(), WindowData{game_state->get_center(),window_size});
         window.display();
         drawer.clear();
 
@@ -84,12 +85,11 @@ int main() {
     return 0;
 }
 
-void resize_window(sf::RenderWindow* window, sf::Event* event, sf::Vector2f* window_size) {
+void resize(sf::Event* event, sf::Vector2f* window_size) {
     *window_size = sf::Vector2f(sf::Vector2u(event->size.width, event->size.height));
 }
 
 void set_view(sf::RenderWindow* window, sf::Vector2f window_size, sf::Vector2f center) {
-    float vx = SIGHT_LIMIT/sqrtf(1+(window_size.x*window_size.y)/(window_size.x*window_size.x));
-    float vy = SIGHT_LIMIT/sqrtf(1+(window_size.x*window_size.x)/(window_size.y*window_size.y));
-    window->setView(sf::View(sf::FloatRect(-vx+center.x, -vy+center.y, 2*vx, 2*vy)));
+    sf::Vector2f v = get_view_size(window_size);
+    window->setView(sf::View(sf::FloatRect(center-v, 2.f*v)));
 }
