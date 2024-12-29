@@ -43,10 +43,10 @@ class Drawer {
     std::vector<Shape*> shapes;
     // NEW
     void add(SpaceObject* object);
-    void addAll(DrawDataI* source);
-    void setFov(sf::Vector2f center);
+    void add_all(DrawDataI* source);
     void clear();
     void draw(sf::RenderWindow* window);
+    void draw_bases(sf::RenderWindow* window);
     ~Drawer();
 };
 

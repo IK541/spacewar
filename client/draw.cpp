@@ -53,7 +53,7 @@ void Drawer::add(SpaceObject* object) {
     this->shapes.push_back(shape);
 }
 
-void Drawer::addAll(DrawDataI* source) {
+void Drawer::add_all(DrawDataI* source) {
     std::vector<SpaceObject*> data;
     source->get_space_objects(&data);
     for(SpaceObject* object: data) this->add(object);
@@ -66,6 +66,13 @@ void Drawer::clear() {
 
 void Drawer::draw(sf::RenderWindow* window) {
     for(Shape* shape: this->shapes) shape->draw(window);
+}
+
+void Drawer::draw_bases(sf::RenderWindow* window) {
+    Circle blue_zone(sf::Vector2f(0,BASE_DIST),BASE_ZONE_RADIUS,sf::Color(0,0,127,63)); blue_zone.draw(window);
+    Circle red_zone(sf::Vector2f(0,-BASE_DIST),BASE_ZONE_RADIUS,sf::Color(127,0,0,63)); red_zone.draw(window);
+    Circle blue_base(sf::Vector2f(0,BASE_DIST),BASE_RADIUS,sf::Color(0,0,127)); blue_base.draw(window);
+    Circle red_base(sf::Vector2f(0,-BASE_DIST),BASE_RADIUS,sf::Color(127,0,0)); red_base.draw(window);
 }
 
 Drawer::~Drawer() { this->clear(); }

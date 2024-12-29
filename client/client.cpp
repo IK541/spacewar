@@ -65,8 +65,9 @@ int main() {
 
         // draw phase
         set_view(&window, window_size, game_state->get_center());
-        drawer.addAll(game_state);
+        drawer.add_all(game_state);
         window.clear();
+        drawer.draw_bases(&window);
         drawer.draw(&window);
         window.display();
         drawer.clear();
