@@ -50,8 +50,9 @@ struct SpaceObject {
 
 // Input
 
-struct Input {
-    double direction;
+struct GameIn {
+    uint32_t timestamp;
+    float direction;
     bool shoot;
     bool engine_on;
 };

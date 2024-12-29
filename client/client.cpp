@@ -71,8 +71,9 @@ int main() {
         // user phase
         UserInput user_input = input_collector.collect();
         SendData out_data = input_translator.translate(user_input);
-        uint8_t* bytes = UdpOutputTranslator(out_data.udp_data);
+        uint8_t* bytes = UdpOutputTranslator(*(GameIn*)out_data.data);
         socket->send(bytes, 9, sf::IpAddress(SERVER_ADDR), SERVER_PORT);
+        delete (GameIn*)out_data.data;
         delete [] bytes;
     }
 

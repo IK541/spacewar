@@ -17,11 +17,11 @@
 
 class InputState {
     private:
-    Input input;
+    GameIn input;
     std::mutex mtx;
     public:
-    Input get_input(){std::lock_guard<std::mutex> lock(this->mtx);return this->input;}
-    void set_input(Input i){std::lock_guard<std::mutex> lock(this->mtx);this->input=i;}
+    GameIn get_input(){std::lock_guard<std::mutex> lock(this->mtx);return this->input;}
+    void set_input(GameIn i){std::lock_guard<std::mutex> lock(this->mtx);this->input=i;}
 };
 
 void receiver(InputState* input_state, int sfd) {
@@ -30,7 +30,7 @@ void receiver(InputState* input_state, int sfd) {
     while(1) {
         size = recvfrom(sfd, buffer, BUFFER_SIZE, 0, NULL, NULL);
         if(size < 9) continue;
-        Input input = UdpInputTranslator((uint8_t*)buffer);
+        GameIn input = UdpInputTranslator((uint8_t*)buffer);
         input_state->set_input(input);
     }
 }

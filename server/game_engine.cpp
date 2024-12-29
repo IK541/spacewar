@@ -6,13 +6,13 @@
 
 Player::Player(int player_id, Ship* ship):id(player_id),ship(ship),
 ammo(MAX_AMMO),reload(0),rearm(0),respawn(RESPAWN_TIME),current_bullet(0),
-last_input(Input{ship->id<RED_TEAM_BEGIN?M_PI_2:-M_PI_2,false,false}){
+last_input(GameIn{0,(float)(ship->id<RED_TEAM_BEGIN?M_PI_2:-M_PI_2),false,false}){
     ship->player = this;
 }
 
 Player::Player():id(0),ship(NULL),
 ammo(MAX_AMMO),reload(0),rearm(0),respawn(RESPAWN_TIME),current_bullet(0),
-last_input(Input{0.0,false,false}){}
+last_input(GameIn{0,0.f,false,false}){}
 
 void Player::update_ship() {
     if(this->respawn) {--this->respawn; return;}
@@ -213,7 +213,6 @@ void Movables::move(double dt) {
 
 #define RAD 5
 void Movables::add_asteroid(uint16_t id) {
-    // TODO: do not generate no fly only asteroids
     double angle = 2 * M_PI * ((double) rand_r(&this->seed) / (double) RAND_MAX);
     double offset = 2 * BARRIER_RADIUS * ((double) rand_r(&this->seed) / (double) RAND_MAX) - BARRIER_RADIUS;
     double cooffset = sqrt(TOTAL_RADIUS*TOTAL_RADIUS - offset*offset);
@@ -222,7 +221,6 @@ void Movables::add_asteroid(uint16_t id) {
     double speed_x = - ASTEROID_SPEED * sin(angle);
     double speed_y = - ASTEROID_SPEED * cos(angle);
     items[id-1]->position = vec2{position_x, position_y};
-    // items[id-1]->position = vec2{0, 0};
     items[id-1]->speed = vec2{speed_x, speed_y};
 }
 
@@ -320,9 +318,10 @@ void GameEngine::update_physics(double dt) {
     this->grid.update_base(&this->red.base,vec2{0,BASE_DIST},false);
 }
 
-void GameEngine::update_input(int ship_id, Input input) {
+void GameEngine::update_input(int ship_id, GameIn input) {
     Player* player = get_player(ship_id);
-    player->last_input = input;
+    if(input.timestamp > player->last_input.timestamp)
+        player->last_input = input;
 }
 
 GameOut GameEngine::get_output(int ship_id) {

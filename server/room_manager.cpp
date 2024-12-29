@@ -29,9 +29,9 @@ uint8_t* UdpOutputTranslator(GameOut output) {
     return bytes;
 }
 
-Input UdpInputTranslator(uint8_t* input) {
-    // TODO: timestamp
-    return Input {
+GameIn UdpInputTranslator(uint8_t* input) {
+    return GameIn {
+        .timestamp = *(uint32_t*)(input),
         .direction = *(float*)(input+4),
         .shoot = (bool)(*(input+8) & 0x02),
         .engine_on = (bool)(*(input+8) & 0x01)

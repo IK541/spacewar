@@ -96,7 +96,7 @@ class Player {
     uint16_t rearm;
     uint16_t respawn;
     uint16_t current_bullet;
-    Input last_input; // TODO: add timestamps
+    GameIn last_input;
     Player();
     Player(int player_id, Ship* ship);
     void update_ship();
@@ -148,7 +148,7 @@ class GameEngine {
     Grid grid;
     GameEngine();
     void update_physics(double dt);
-    void update_input(int ship_id, Input input);
+    void update_input(int ship_id, GameIn input);
     GameOut get_output(int ship_id);
     private:
     Player* get_player(int ship_id);

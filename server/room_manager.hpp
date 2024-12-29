@@ -14,4 +14,4 @@ struct CompressedMovable {
 // NEW
 uint8_t* UdpOutputTranslator(GameOut output);
 
-Input UdpInputTranslator(uint8_t* input);
+GameIn UdpInputTranslator(uint8_t* input);

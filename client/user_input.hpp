@@ -12,19 +12,11 @@ struct UserInput {
     bool rmb;
 };
 
-struct UdpSendData {
-    uint32_t timestamp;
-    float direction;
-    uint8_t flags;
-};
-
 struct TcpSendData {};
 
 struct SendData {
-    bool udp_present;
-    UdpSendData udp_data;
-    bool tcp_present;
-    TcpSendData tcp_data;
+    bool udp;
+    void* data;
 };
 
 // mock definitions
@@ -56,4 +48,4 @@ class InputTranslator {
 };
 
 // NEW
-uint8_t* UdpOutputTranslator(UdpSendData data);
+uint8_t* UdpOutputTranslator(GameIn data);
