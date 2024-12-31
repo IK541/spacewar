@@ -244,7 +244,12 @@ Movables::~Movables() {
     for(int i = 0; i < TOTAL_ENTITIES; ++i) delete this->items[i];
 }
 
-GameEngine::GameEngine():timestamp(0),movables(time(NULL)) {
+inline int rand_from_time() {
+    timespec t;
+    clock_gettime(CLOCK_MONOTONIC, &t);
+    return t.tv_sec ^ t.tv_nsec;
+}
+GameEngine::GameEngine():timestamp(0),movables(rand_from_time()) {
     this->grid = Collider();
     this->blue.base.hp = BASE_HP;
     this->blue.size = 0;
