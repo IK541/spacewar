@@ -5,9 +5,9 @@
 InputCollector::InputCollector(sf::Window* window):window(window){};
 UserInput InputCollector::collect() {
     return UserInput {
-        .pos = sf::Mouse::getPosition(*window),
-        .lmb = sf::Mouse::isButtonPressed(sf::Mouse::Left),
-        .rmb = sf::Mouse::isButtonPressed(sf::Mouse::Right)
+        sf::Mouse::getPosition(*window),
+        sf::Mouse::isButtonPressed(sf::Mouse::Left),
+        sf::Mouse::isButtonPressed(sf::Mouse::Right)
     };
 }
 
@@ -25,10 +25,10 @@ SendData InputTranslator::translate(UserInput input) {
         result.udp = true;
         sf::Vector2f mouse_position = sf::Vector2f(input.pos) - 0.5f * sf::Vector2f(this->window->getSize());
         result.data = new GameIn {
-            .timestamp = this->timer++,
-            .angle = atan2f(-mouse_position.y, mouse_position.x),
-            .shoot = input.lmb,
-            .engine_on = input.rmb
+            this->timer++,
+            atan2f(-mouse_position.y, mouse_position.x),
+            input.lmb,
+            input.rmb
         };
     } // TODO: tcp
     return result;

@@ -49,11 +49,11 @@ void Player::shoot(Movables* movables) {
 
 PlayerData Player::generate_player_data() {
     return PlayerData {
-        .ammo = this->ammo,
-        .reload = this->reload,
-        .rearm = this->rearm,
-        .respawn = this->respawn,
-        .ship_id = this->ship->id
+        this->ammo,
+        this->reload,
+        this->rearm,
+        this->respawn,
+        this->ship->id
     };
 }
 
@@ -175,8 +175,8 @@ Neighbours Grid::get_neighbours(Player* player) {
             }
     uint8_t count = (uint8_t)movables->size();
     return Neighbours {
-        .count = count,
-        .movables = movables
+        count,
+        movables
     };
 }
 #undef CHECK_XY
@@ -349,16 +349,16 @@ GameOut GameEngine::get_output(int ship_id) {
     PlayerData player_data = player->generate_player_data();
     Neighbours neighbours = this->grid.get_neighbours(player);
     return GameOut {
-        .timestamp = timestamp,
-        .blue_hp = blue.hp,
-        .red_hp = red.hp,
-        .ammo = player_data.ammo,
-        .reload = player_data.reload,
-        .rearm = player_data.rearm,
-        .respawn = player_data.respawn,
-        .ship_id = player_data.ship_id,
-        .movables_count = neighbours.count,
-        .objects = neighbours.movables
+        timestamp,
+        blue.hp,
+        red.hp,
+        player_data.ammo,
+        player_data.reload,
+        player_data.rearm,
+        player_data.respawn,
+        player_data.ship_id,
+        neighbours.count,
+        neighbours.movables
     };
 }
 

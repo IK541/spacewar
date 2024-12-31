@@ -149,11 +149,11 @@ DrawData GameState::get_game_state() {
     std::vector<SpaceObject*>* objects = new std::vector<SpaceObject*>;
     this->get_space_objects(objects);
     return DrawData {
-        .objects = objects,
-        .blue = this->blue_hp,
-        .red = this->red_hp,
-        .ammo = this->ammo,
-        .respawn = this->respawn
+        objects,
+        this->blue_hp,
+        this->red_hp,
+        this->ammo,
+        this->respawn
     };
 }
 
@@ -210,15 +210,15 @@ GameOut UdpInputTranslator(uint8_t* data, int size) {
         objects->push_back(new SpaceObject{id,x,y,angle});
     }
     return GameOut {
-        .timestamp = timestamp,
-        .blue_hp = blue_hp,
-        .red_hp = red_hp,
-        .ammo = ammo,
-        .reload = reload,
-        .rearm = rearm,
-        .respawn = respawn,
-        .ship_id = ship_id,
-        .movables_count = movables_count,
-        .objects = objects
+        timestamp,
+        blue_hp,
+        red_hp,
+        ammo,
+        reload,
+        rearm,
+        respawn,
+        ship_id,
+        movables_count,
+        objects
     };
 }
