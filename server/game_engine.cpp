@@ -57,129 +57,78 @@ PlayerData Player::generate_player_data() {
     };
 }
 
-#define CHECK_XY(x,y) if((x) >= 0 && (y) >= 0 && (x) < GRID_SIZE && (y) < GRID_SIZE)
-void Grid::update_state(Movables* movables) {
-    for(int y = 0; y < GRID_SIZE; ++y) {
-        for(int x = 0; x < GRID_SIZE; ++x) {
-            this->fields[GRID_SIZE*y+x].clear();
+void Collider::update_collisions(Movables* movables) {
+    // ship - bullet
+    for(int id1 = BLUE_TEAM_BEGIN; id1 < BLUE_BULLETS_BEGIN; ++id1) for(int id2 = BLUE_BULLETS_BEGIN; id2 < ASTEROIDS_BEGIN; ++id2) {
+        Ship* ship = (Ship*)(movables->items[id1-1]); Bullet* bullet = (Bullet*)(movables->items[id2-1]);
+        vec2 p1 = ship->position; vec2 p2 = bullet->position;
+        if((p1.x-p2.x)*(p1.x-p2.x)+(p1.y-p2.y)*(p1.y-p2.y)<(SHIP_SIZE+BULLET_SIZE)*(SHIP_SIZE+BULLET_SIZE)) {
+            movables->respawn(ship); bullet->position = vec2{INFINITY, INFINITY}; bullet->lifetime = 0;
         }
     }
-    for(int id = BLUE_TEAM_BEGIN; id <= TOTAL_ENTITIES; ++id) {
+    // ship - asteroid
+    for(int id1 = BLUE_TEAM_BEGIN; id1 < BLUE_BULLETS_BEGIN; ++id1) for(int id2 = ASTEROIDS_BEGIN; id2 <= TOTAL_ENTITIES; ++id2) {
+        Ship* ship = (Ship*)(movables->items[id1-1]); Asteroid* asteroid = (Asteroid*)(movables->items[id2-1]);
+        vec2 p1 = ship->position; vec2 p2 = asteroid->position;
+        if((p1.x-p2.x)*(p1.x-p2.x)+(p1.y-p2.y)*(p1.y-p2.y)<(SHIP_SIZE+ASTEROID_SIZE)*(SHIP_SIZE+ASTEROID_SIZE)) {
+            movables->respawn(ship); movables->add_asteroid(id2);
+        }
+    }
+    // bullet - asteroid
+    for(int id1 = BLUE_BULLETS_BEGIN; id1 < ASTEROIDS_BEGIN; ++id1) for(int id2 = ASTEROIDS_BEGIN; id2 <= TOTAL_ENTITIES; ++id2) {
+        Bullet* bullet = (Bullet*)(movables->items[id1-1]);
+        if(!bullet->lifetime) continue;
+        Asteroid* asteroid = (Asteroid*)(movables->items[id2-1]);
+        vec2 p1 = bullet->position; vec2 p2 = asteroid->position;
+        if((p1.x-p2.x)*(p1.x-p2.x)+(p1.y-p2.y)*(p1.y-p2.y)<(BULLET_SIZE+ASTEROID_SIZE)*(BULLET_SIZE+ASTEROID_SIZE)) {
+            bullet->position = vec2{INFINITY, INFINITY}; bullet->lifetime = 0; movables->add_asteroid(id2);
+        }
+    }
+}
+
+void Collider::update_base(Movables* movables, Base* base, vec2 where, bool side) {
+    // asteroids
+    for(int id = ASTEROIDS_BEGIN; id < TOTAL_ENTITIES; ++id) {
         vec2 pos = movables->items[id-1]->position;
-        int x = (int) (pos.x + TOTAL_RADIUS);
-        int y = (int) (pos.y + TOTAL_RADIUS);
-        CHECK_XY(x,y) this->fields[GRID_SIZE*y+x].insert(movables->items[id-1]);
+        if((pos.x-where.x)*(pos.x-where.x)+(pos.y-where.y)*(pos.y-where.y)<(BASE_ZONE_RADIUS+ASTEROID_SIZE)*(BASE_ZONE_RADIUS+ASTEROID_SIZE))
+            movables->add_asteroid(id);
     }
-}
-
-inline void update_collisions_square(Movable* movable, std::set<Movable*>* movset, Movables* movables) {
-    int id = movable->id;
-    float s = get_size(id);
-    vec2 pos = movable->position;
-    double x = pos.x + TOTAL_RADIUS;
-    double y = pos.y + TOTAL_RADIUS;
-    int type = get_type(id);
-
-    for(Movable* movable2: *movset) {
-        int id2 = movable2->id;
-        float s2 = get_size(id2);
-        vec2 pos2 = movable2->position;
-        double x2 = pos2.x + TOTAL_RADIUS;
-        double y2 = pos2.y + TOTAL_RADIUS;
-        int type2 = get_type(id2);
-
-        if((x-x2)*(x-x2)+(y-y2)*(y-y2) < (s+s2)*(s+s2) && type != type2) {
-            if(type == TYPE_SHIP) movables->respawn((Ship*)movable);
-            if(type == TYPE_BULLET) movable->position = vec2{INFINITY, INFINITY};
-            if(type == TYPE_ASTEROID) movables->add_asteroid(id);
-            if(type2 == TYPE_SHIP) movables->respawn((Ship*)movable2);
-            if(type2 == TYPE_BULLET) movable2->position = vec2{INFINITY, INFINITY};
-            if(type2 == TYPE_ASTEROID) movables->add_asteroid(id2);
+    // bullets
+    for(int id = BLUE_BULLETS_BEGIN; id < ASTEROIDS_BEGIN; ++id) {
+        vec2 pos = movables->items[id-1]->position;
+        if((pos.x-where.x)*(pos.x-where.x)+(pos.y-where.y)*(pos.y-where.y)<(BASE_RADIUS+BULLET_SIZE)*(BASE_RADIUS+BULLET_SIZE)) {
+            movables->items[id-1]->position = vec2{INFINITY, INFINITY};
+            if(base->hp) --base->hp;
+        }
+    }
+    // reload
+    for(int id = BLUE_TEAM_BEGIN; id < RED_TEAM_BEGIN; ++id) {
+        vec2 pos = movables->items[id-1]->position;
+        if((pos.x-where.x)*(pos.x-where.x)+(pos.y-where.y)*(pos.y-where.y)<BASE_RADIUS*BASE_RADIUS && get_side(id) == side) {
+            Player* player = ((Player*)((Ship*)movables->items[id-1])->player);
+            if(player->rearm) --player->rearm;
+            else if(player->ammo < MAX_AMMO) {
+                ++player->ammo;
+                player->rearm = RELOAD_TIME;
+            }
         }
     }
 }
-void Grid::update_collisions(Movables* movables) {
-    for(int id = BLUE_TEAM_BEGIN; id < ASTEROIDS_BEGIN; ++id) {
+
+Neighbours Collider::get_neighbours(Movables* movables, Player* player) {
+    std::vector<SpaceObject*>* objects = new std::vector<SpaceObject*>;
+    vec2 sp = player->ship->position;
+    for(uint8_t id = BLUE_TEAM_BEGIN; id < TOTAL_ENTITIES; ++id) {
         Movable* movable = movables->items[id-1];
         vec2 pos = movable->position;
-        int x = (int) (pos.x + TOTAL_RADIUS);
-        int y = (int) (pos.y + TOTAL_RADIUS);
-        double shift_x = fmod(x+TOTAL_RADIUS+1, 1.0);
-        double shift_y = fmod(y+TOTAL_RADIUS+1, 1.0);
-        double min_x = shift_x - get_size(id);
-        double min_y = shift_y - get_size(id);
-        double max_x = shift_x + get_size(id);
-        double max_y = shift_y + get_size(id);
-        CHECK_XY(x,y) update_collisions_square(movable, &(this->fields[GRID_SIZE*y+x]), movables);
-        if(min_y < 0.0) CHECK_XY(x, y-1) update_collisions_square(movable, &(this->fields[GRID_SIZE*(y-1)+x]), movables);
-        if(min_y < 0.0 && max_x > 1.0) CHECK_XY(x+1, y-1) update_collisions_square(movable, &(this->fields[GRID_SIZE*(y-1)+x+1]), movables);
-        if(max_x > 1.0) CHECK_XY(x+1, y) update_collisions_square(movable, &(this->fields[GRID_SIZE*y+x+1]), movables);
-        if(max_y > 1.0 && max_x > 1.0) CHECK_XY(x+1, y+1) update_collisions_square(movable, &(this->fields[GRID_SIZE*(y+1)+x+1]), movables);
-        if(max_y > 1.0) CHECK_XY(x, y+1) update_collisions_square(movable, &(this->fields[GRID_SIZE*(y+1)+x]), movables);
-        if(max_y > 1.0 && min_x < 0.0) CHECK_XY(x-1, y+1) update_collisions_square(movable, &(this->fields[GRID_SIZE*(y+1)+x-1]), movables);
-        if(min_x < 0.0) CHECK_XY(x-1, y) update_collisions_square(movable, &(this->fields[GRID_SIZE*y+x-1]), movables);
-        if(min_y < 0.0 && min_x < 0.0) CHECK_XY(x-1, y-1) update_collisions_square(movable, &(this->fields[GRID_SIZE*(y-1)+x-1]), movables);
-    }
-}
-
-void Grid::update_zone(Movables* movables, vec2 where) {
-    for(int y = TOTAL_RADIUS+where.y-BASE_ZONE_RADIUS-1; y <= TOTAL_RADIUS+where.y+BASE_ZONE_RADIUS; ++y) {
-        for(int x = TOTAL_RADIUS+where.x-BASE_ZONE_RADIUS-1; x <= TOTAL_RADIUS+where.x+BASE_ZONE_RADIUS; ++x) {
-            CHECK_XY(x,y) for (Movable* movable: this->fields[y*GRID_SIZE+x]) {
-                int id = movable->id;
-                vec2 pos = movable->position;
-                if(get_type(id) == TYPE_ASTEROID)
-                if((pos.x-where.x)*(pos.x-where.x)+(pos.y-where.y)*(pos.y-where.y)<(BASE_ZONE_RADIUS+ASTEROID_SIZE)*(BASE_ZONE_RADIUS+ASTEROID_SIZE)) {
-                    movables->add_asteroid(id);
-                }
-            }
+        if((pos.x-sp.x)*(pos.x-sp.x)+(pos.y-sp.y)*(pos.y-sp.y)<SIGHT_LIMIT*SIGHT_LIMIT) {
+            double angle = get_type(id) == TYPE_SHIP ? ((Ship*)movable)->angle : get_type(id) == TYPE_BULLET ? ((Bullet*)movable)->angle : 0.0;
+            objects->push_back(new SpaceObject{id, pos.x, pos.y, angle});
         }
     }
+    uint8_t count = (uint8_t)objects->size();
+    return Neighbours { count, objects };
 }
-
-void Grid::update_base(Base* base, vec2 where, bool side) {
-    for(int y = TOTAL_RADIUS+where.y-BASE_RADIUS-1; y <= TOTAL_RADIUS+where.y+BASE_RADIUS; ++y) {
-        for(int x = TOTAL_RADIUS+where.x-BASE_RADIUS-1; x <= TOTAL_RADIUS+where.x+BASE_RADIUS; ++x) {
-            CHECK_XY(x,y) for(Movable* movable: this->fields[y*GRID_SIZE+x]) {
-                int id = movable->id;
-                vec2 pos = movable->position;
-                if(get_type(id) == TYPE_BULLET)
-                if((pos.x-where.x)*(pos.x-where.x)+(pos.y-where.y)*(pos.y-where.y)<(BASE_RADIUS+BULLET_SIZE)*(BASE_RADIUS+BULLET_SIZE)) {
-                    movable->position = vec2{INFINITY, INFINITY};
-                    if(base->hp) --base->hp;
-                }
-                if(get_type(id) == TYPE_SHIP && get_side(id) == side)
-                if((pos.x-where.x)*(pos.x-where.x)+(pos.y-where.y)*(pos.y-where.y)<BASE_RADIUS*BASE_RADIUS) {
-                    Player* player = ((Player*)((Ship*)movable)->player);
-                    if(player->rearm) --player->rearm;
-                    else if(player->ammo < MAX_AMMO) {
-                        ++player->ammo;
-                        player->rearm = RELOAD_TIME;
-                    }
-                }
-            }
-        }
-    }
-}
-
-Neighbours Grid::get_neighbours(Player* player) {
-    std::vector<SpaceObject*>* movables = new std::vector<SpaceObject*>;
-    int sy = (int)player->ship->position.y;
-    int sx = (int)player->ship->position.x;
-    for(int y = TOTAL_RADIUS+sy-SIGHT_LIMIT-1; y <= TOTAL_RADIUS+sy+SIGHT_LIMIT; ++y)
-        for(int x = TOTAL_RADIUS+sx-SIGHT_LIMIT-1; x <= TOTAL_RADIUS+sx+SIGHT_LIMIT; ++x)
-            CHECK_XY(x,y) for(Movable* movable: this->fields[y*GRID_SIZE+x]) {
-                double angle = get_type(movable->id) == TYPE_SHIP ? ((Ship*)movable)->angle :
-                    get_type(movable->id) == TYPE_BULLET ? ((Bullet*)movable)->angle : 0.0;
-                movables->push_back(new SpaceObject{movable->id, movable->position.x, movable->position.y, angle});
-            }
-    uint8_t count = (uint8_t)movables->size();
-    return Neighbours {
-        count,
-        movables
-    };
-}
-#undef CHECK_XY
 
 
 Movables::Movables(unsigned int seed) {
@@ -296,7 +245,7 @@ Movables::~Movables() {
 }
 
 GameEngine::GameEngine():timestamp(0),movables(time(NULL)) {
-    this->grid = Grid();
+    this->grid = Collider();
     this->blue.base.hp = BASE_HP;
     this->blue.size = 0;
     for(int id = BLUE_TEAM_BEGIN; id < RED_TEAM_BEGIN; ++id) {
@@ -327,12 +276,9 @@ void GameEngine::update_physics(double dt) {
     this->movables.update_asteroids();
     this->movables.pull_ships(dt);
     this->movables.update_bullets();
-    this->grid.update_state(&this->movables);
+    this->grid.update_base(&this->movables,&this->blue.base,vec2{0,BASE_DIST},false);
+    this->grid.update_base(&this->movables,&this->red.base,vec2{0,-BASE_DIST},true);
     this->grid.update_collisions(&this->movables);
-    this->grid.update_zone(&this->movables,vec2{0,BASE_DIST});
-    this->grid.update_zone(&this->movables,vec2{0,-BASE_DIST});
-    this->grid.update_base(&this->blue.base,vec2{0,BASE_DIST},false);
-    this->grid.update_base(&this->red.base,vec2{0,-BASE_DIST},true);
 }
 
 void GameEngine::update_input(int ship_id, GameIn input) {
@@ -347,7 +293,7 @@ GameOut GameEngine::get_output(int ship_id) {
     Base blue = this->blue.base;
     Base red = this->red.base;
     PlayerData player_data = player->generate_player_data();
-    Neighbours neighbours = this->grid.get_neighbours(player);
+    Neighbours neighbours = this->grid.get_neighbours(&this->movables,player);
     return GameOut {
         timestamp,
         blue.hp,

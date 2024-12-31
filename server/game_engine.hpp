@@ -17,7 +17,7 @@
 // predeclared
 class Player;
 class Movables;
-class Grid;
+class Collider;
 
 // Movables
 
@@ -98,15 +98,12 @@ class Player {
     PlayerData generate_player_data();
 };
 
-class Grid {
+class Collider {
     public:
-    std::set<Movable*> fields[GRID_SIZE*GRID_SIZE];
-    void update_state(Movables* movables);
     void update_collisions(Movables* movables);
-    void update_zone(Movables* movables, vec2 where);
-    void update_base(Base* base, vec2 where, bool side);
+    void update_base(Movables* movables, Base* base, vec2 where, bool side);
     // NEW
-    Neighbours get_neighbours(Player* player);
+    Neighbours get_neighbours(Movables* movables, Player* player);
 };
 
 class Movables {
@@ -140,7 +137,7 @@ class GameEngine {
     Team blue;
     Team red;
     Movables movables;
-    Grid grid;
+    Collider grid;
     GameEngine();
     void update_physics(double dt);
     void update_input(int ship_id, GameIn input);
