@@ -10,6 +10,7 @@
 #include <thread>
 #include <mutex>
 #include "Room.hpp"
+#include "Player.hpp"
 
 #define MAX_EVENTS 8
 #define MAX_CLIENTS 20 // >= ROOM_COUNT * PLAYERS_PER_TEAM * 2
@@ -45,10 +46,62 @@ Serv::Serv(int _port){
         }
 
         std::cout << "server created and binded successfully\n";
-
-
 }
 
+void Serv::serve(mutex *mtx){
+    // Start listening
+    if (listen(server_fd, 10) < 0) {
+        perror("Listen failed");
+        exit(-1);
+    }
+
+    pollfd pfds[MAX_CLIENTS + 1]{};
+
+    bool free_pfds[MAX_CLIENTS]{};
+    pfds[MAX_CLIENTS].fd = server_fd;
+    pfds[MAX_CLIENTS].events = POLLIN;
+
+    std::cout << "Server is listening on port " << port << "...\n";
+    while (true) {
+        int num_events = poll(pfds, MAX_CLIENTS + 1, -1);
+        if (num_events < 0) {
+            perror("Poll failed");
+            break;
+        }
+
+        // Check if there's a new connection
+        if (pfds[MAX_CLIENTS].revents & POLLIN) {
+            handle_new_connection(pfds, free_pfds, server_fd);
+            --num_events; // One event handled
+        }
+
+        // Handle events for existing clients
+        for (int i = 0; i < MAX_CLIENTS && num_events > 0; ++i) {
+            if (pfds[i].fd == -1) continue; // Skip unused slots
+
+            // Check if there's data to read
+            if (pfds[i].revents & POLLIN) {
+                handle_client_input(i, pfds, free_pfds);
+                --num_events;
+            }
+
+            // Check if ready to write (optional, if implementing non-blocking send)
+            if (pfds[i].revents & POLLOUT) {
+                handle_client_output(i, pfds, free_pfds);
+                --num_events;
+            }
+
+            // Check for error conditions
+            if (pfds[i].revents & (POLLERR | POLLHUP | POLLNVAL)) {
+                disconnect_client(i, pfds, free_pfds);
+                --num_events;
+            }
+        }
+    }
+
+    close(server_fd);
+    return;
+}
 
 void Serv::serve(Player players[], Room rooms[], mutex *mtx){
 
@@ -127,18 +180,24 @@ void Serv::handle_new_connection(pollfd pfds[], bool free_pfds[], int server_fd)
     }
 
     // Find a free slot
+    serv_mutex.lock();
     for (int i = 0; i < MAX_CLIENTS; ++i) {
         if (!free_pfds[i]) {
             free_pfds[i] = true;
             pfds[i].fd = client_fd;
             pfds[i].events = POLLIN;
             std::cout << "Client connected on slot " << i << "\n";
+
+            Player::players[i].take(player_address, client_fd);
+            serv_mutex.unlock();
             return;
         }
     }
 
     // Server full
     std::string msg = "Server is full, try again later\n";
+    serv_mutex.unlock();
+    cout << "denied client, too much users\n";
     send(client_fd, msg.c_str(), msg.size(), 0);
     shutdown(client_fd, SHUT_RDWR);
     close(client_fd);
@@ -148,6 +207,7 @@ void Serv::handle_new_connection(pollfd pfds[], bool free_pfds[], int server_fd)
 void Serv::handle_client_input(int client_id, pollfd *pfds, bool *free_pfds) {
     char buffer[1024];
     int bytes_read = recv(pfds[client_id].fd, buffer, sizeof(buffer) - 1, 0);
+
     if (bytes_read <= 0) {
         if (bytes_read == 0) {
             std::cout << "Client " << client_id << " disconnected.\n";
@@ -155,14 +215,46 @@ void Serv::handle_client_input(int client_id, pollfd *pfds, bool *free_pfds) {
             perror("Recv failed");
         }
         disconnect_client(client_id, pfds, free_pfds);
-    } else {
-        buffer[bytes_read] = '\0'; // Null-terminate for safety
-        std::cout << "Received from client " << client_id << ": " << buffer << "\n";
+        return;
+    }
 
-        // Example: Echo the message back
-        send(pfds[client_id].fd, buffer, bytes_read, 0);
+    buffer[bytes_read] = '\0'; // Null-terminate the message
+    std::cout << "Received from client " << client_id << ": " << buffer << "\n";
+
+    // Check if there's a message
+    if (bytes_read > 0) {
+        char first_char = buffer[0]; // First letter of the message
+
+        switch (first_char) {
+            case 'A':
+            case 'a':
+                std::cout << "Client " << client_id << " sent an 'A'-type message.\n";
+                // Handle 'A' type message
+                send(pfds[client_id].fd, "Acknowledged A\n", 14, 0);
+                break;
+
+            case 'B':
+            case 'b':
+                std::cout << "Client " << client_id << " sent a 'B'-type message.\n";
+                // Handle 'B' type message
+                send(pfds[client_id].fd, "Acknowledged B\n", 14, 0);
+                break;
+
+            case 'C':
+            case 'c':
+                std::cout << "Client " << client_id << " sent a 'C'-type message.\n";
+                // Handle 'C' type message
+                send(pfds[client_id].fd, "Acknowledged C\n", 14, 0);
+                break;
+
+            default:
+                std::cout << "Client " << client_id << " sent an unrecognized message type: " << first_char << "\n";
+                send(pfds[client_id].fd, "Unrecognized command\n", 21, 0);
+                break;
+        }
     }
 }
+
 
 
 void Serv::disconnect_client(int client_id, pollfd *pfds, bool *free_pfds) {
@@ -170,6 +262,7 @@ void Serv::disconnect_client(int client_id, pollfd *pfds, bool *free_pfds) {
     pfds[client_id].fd = -1;
     pfds[client_id].events = 0;
     free_pfds[client_id] = false;
+    Player::players[client_id].make_free();
     std::cout << "Client " << client_id << " has been disconnected.\n";
 }
 
@@ -178,3 +271,5 @@ void Serv::handle_client_output(int client_id, pollfd *pfds, bool *free_pfds) {
     std::string msg = "Server response\n";
     send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
 }
+
+

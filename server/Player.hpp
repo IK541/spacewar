@@ -18,6 +18,9 @@ public:
     int fd;
     bool free;
 
+    static const int max_players = 6;
+    static Player players[max_players];
+
 
 
     Player();
@@ -26,9 +29,9 @@ public:
 
     void make_free();
 
-    static int find_free_slot_serv(Player players[]){
+    static int find_free_slot_serv(){
         
-        for(int i = 0; i < 20; i++){
+        for(int i = 0; i < max_players; i++){
             if(players[i].free)
             return i;
         }

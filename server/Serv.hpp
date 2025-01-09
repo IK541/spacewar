@@ -19,17 +19,19 @@ class Serv {
 
     public:
 
+    static std::mutex serv_mutex;
+
 
     Serv(int _port);
 
+
     void serve(Player players[], Room rooms[], std::mutex *mtx);
+
+    void serve(std::mutex *mtx);
 
     void handle_new_connection(pollfd pfds[], bool free_pfds[], int server_fd);
 
     void handle_client_input(int client_id, pollfd *pfds, bool *free_pfds);
-
-
-    void handle_client(int client_fd);
 
     void disconnect_client(int client_id, pollfd *pfds, bool *free_pfds);
 
