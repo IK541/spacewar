@@ -2,13 +2,15 @@
 
 #include <cstring>
 #include <sys/socket.h>
+#include <poll.h>
 #include <netinet/in.h>
 #include <unistd.h>
 #include <csignal>
 #include <iostream>
 #include <thread>
 
-
+#define MAX_EVENTS 8
+#define MAX_CLIENTS 20 // >= ROOM_COUNT * PLAYERS_PER_TEAM * 2
 
 using namespace std;
 
@@ -49,34 +51,47 @@ Serv::Serv(int _port){
 void Serv::serve(){
 
         // Start listening
-        if (listen(server_fd, 10) < 0) {
+        if (listen(this->server_fd, 10) < 0) {
             perror("Listen failed");
             exit(-1);
         }
 
+        pollfd pfds[MAX_CLIENTS+1]{};
+        bool free_pfds[MAX_CLIENTS]{}; // TODO: move this to global client table
+        pfds[MAX_CLIENTS].fd = server_fd;
+        pfds[MAX_CLIENTS].events = POLLIN;
+
         std::cout << "Server is listening on port " << port << "...\n";
         while (true) {
-            int client_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen);
-            if (client_fd < 0) {
-                perror("Accept failed");
-                continue;
+            poll(pfds, MAX_CLIENTS + 1, -1);
+            // accepter
+            if(pfds[MAX_CLIENTS].revents & POLL_IN) {
+                int client_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen);
+                if (client_fd < 0) perror("Accept failed");
+                else {
+                    std::cout << "New client connected.\n";
+                    bool success = false;
+                    for(int cid = 0; cid < MAX_CLIENTS; ++cid) {
+                        if(!free_pfds[cid]) continue;
+                        free_pfds[cid] = false; // TODO: remember to zero this at disconnect
+                        success = true;
+                        pfds[cid].fd = client_fd;
+                        pfds[cid].events = POLL_IN; // TODO: remeber to zero this field once client is disconnected
+                        // TODO: save client address here - will be useful for UDP
+                        break;
+                    } if(!success) {
+                        std::string msg = "server is full, try again later";
+                        send(client_fd, msg.c_str(), strlen(msg.c_str()), 0);
+                        shutdown(client_fd, SHUT_RDWR);
+                        close(client_fd);
+                    }
+                }
             }
-
-            std::cout << "New client connected.\n";
-
-            // std::thread client
-
-            // Create a new process for the client
-            pid_t pid = fork();
-            if (pid == 0) { // Child process
-                close(server_fd); // Close the server socket in the child process
-                handle_client(client_fd);
-                exit(0);
-            } else if (pid < 0) {
-                perror("Fork failed");
+            // client handler
+            for(int cid = 0; cid < MAX_CLIENTS; ++cid) {
+                if(free_pfds[cid] || !(pfds[cid].revents & POLL_IN)) continue;
+                // TODO: handle_client here
             }
-
-            close(client_fd); // Parent process closes the client socket
         }
 
         close(server_fd);
