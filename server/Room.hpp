@@ -1,25 +1,21 @@
 #pragma once
 
-#include <vector>
 #include <cstdio>
-#include <unistd.h> // for sleep
-using namespace std;
+#include <unistd.h> 
+#include "Player.hpp"
 
-class Player {
-public:
-    bool ready;
-    // team will be added
-    // name will be added
-    // socket will be added
-};
+using namespace std;
 
 class Room {
 public:
+
+    static const int max_players = 6;
     int id;
-    vector<Player> players;
+    Player players[max_players];
+    bool room_slots[max_players];
     bool playing;
 
-    Room(int);
+    Room(int id);
 
     int getID();
     int getReadyPlayers();

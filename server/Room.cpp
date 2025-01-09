@@ -1,10 +1,21 @@
 #include "Room.hpp"
 #include <vector>
+#include <cstdio>
+#include <unistd.h> // for sleep
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <string>
+#include "Player.hpp"
+using namespace std;
+
 
 
 Room::Room(int room_id) {
     id = room_id;
     playing = false;
+    for(int i = 0; i < Room::max_players; i++){
+        room_slots[i] = false;
+    }
 }
 
 // will be changed to get room info
@@ -14,15 +25,23 @@ int Room::getID() {
 
 int Room::getReadyPlayers() {
     int ready = 0;
-    for (unsigned i = 0; i < players.size(); i++) {
-        if (players[i].ready)
+    for (int i = 0; i < max_players ; i++) {
+
+        if(room_slots[i] && players[i].ready)
             ready++;
     }
     return ready;
 }
 
 int Room::getPlayerCount() {
-    return players.size();
+    int count = 0;
+    for (int i = 0; i < max_players ; i++) {
+
+        if(room_slots[i]){
+            count++;
+        }
+    }
+    return count;
 }
 
 bool Room::startGame() {
@@ -33,3 +52,5 @@ bool Room::startGame() {
     playing = false;
     return true;
 }
+
+

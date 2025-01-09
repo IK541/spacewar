@@ -8,6 +8,8 @@
 #include <csignal>
 #include <iostream>
 #include <thread>
+#include <mutex>
+#include "Room.hpp"
 
 #define MAX_EVENTS 8
 #define MAX_CLIENTS 20 // >= ROOM_COUNT * PLAYERS_PER_TEAM * 2
@@ -19,7 +21,7 @@ using namespace std;
 
 Serv::Serv(int _port){
         port = _port;
-        opt = 1;
+        int opt = 1;
         addrlen = sizeof(address);
 
         if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
@@ -42,13 +44,13 @@ Serv::Serv(int _port){
             exit(-1);
         }
 
-        std::cout << "server created successfully\n";
+        std::cout << "server created and binded successfully\n";
 
 
 }
 
 
-void Serv::serve(){
+void Serv::serve(Player players[], Room rooms[], mutex *mtx){
 
         // Start listening
         if (listen(this->server_fd, 10) < 0) {
@@ -66,31 +68,52 @@ void Serv::serve(){
             poll(pfds, MAX_CLIENTS + 1, -1);
             // accepter
             if(pfds[MAX_CLIENTS].revents & POLL_IN) {
-                int client_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t*)&addrlen);
+                int free_cid = 0;
+                sockaddr_in player_address;
+                int client_fd = accept(server_fd, (struct sockaddr *)&player_address, (socklen_t*)&player_address);
                 if (client_fd < 0) perror("Accept failed");
                 else {
                     std::cout << "New client connected.\n";
                     bool success = false;
+                    mtx->lock();
                     for(int cid = 0; cid < MAX_CLIENTS; ++cid) {
                         if(!free_pfds[cid]) continue;
                         free_pfds[cid] = false; // TODO: remember to zero this at disconnect
                         success = true;
                         pfds[cid].fd = client_fd;
                         pfds[cid].events = POLL_IN; // TODO: remeber to zero this field once client is disconnected
+                        free_cid = cid;
+                        
                         // TODO: save client address here - will be useful for UDP
+
+
+
+
                         break;
                     } if(!success) {
+                        mtx->unlock();
                         std::string msg = "server is full, try again later";
                         send(client_fd, msg.c_str(), strlen(msg.c_str()), 0);
                         shutdown(client_fd, SHUT_RDWR);
                         close(client_fd);
                     }
+                    
+                    Player p;
+                    p.take(player_address, client_fd);
+                    players[free_cid] = p;
+                    mtx->unlock();
+                    // creating and saving client
+
+
                 }
             }
             // client handler
+            
+
+
             for(int cid = 0; cid < MAX_CLIENTS; ++cid) {
                 if(free_pfds[cid] || !(pfds[cid].revents & POLL_IN)) continue;
-                // TODO: handle_client here
+                
             }
         }
 

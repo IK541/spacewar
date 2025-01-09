@@ -8,31 +8,34 @@
 
 #include "Room.hpp"
 #include "Serv.hpp"
+#include "Player.hpp"
 
 using namespace std;
 
 #define PORT 8080
 #define BUFFER_SIZE 1024
 
+#define PLAYERS_COUNT = 20;
+
 
 // #define MAX_CLIENTS_PER_ROOM 8
 
-std::mutex mtx;
+std::mutex *mtx = new mutex;
 
 
-vector<Room> rooms;
-vector<Player> players;
 
+Room rooms[3];
+Player players[20];
 
 void logic(int room_id){
     printf("room %i is rooming", room_id);
 
     Room r(room_id);
-    mtx.lock();
-    rooms.push_back(r);
+    mtx->lock();
+    rooms[room_id] = r;
 
     printf("\n room id:%i ready \n", r.getID());
-    mtx.unlock();
+    mtx->unlock();
 }
 
 
@@ -49,7 +52,7 @@ void serveRooms(){
 
     sleep(1);
 
-    cout << "ready rooms:" << rooms.size() << endl;
+    // cout << "ready rooms:" << rooms.size() << endl;
 
     // na potrzeby testow
     sleep(9);
@@ -58,13 +61,12 @@ void serveRooms(){
 
 void handleClients(){
     cout << "preparing client handler \n";
-    sleep(1);
 
     Serv server(PORT);
 
 
     // uruchamia po forku funkcję, która wobsługuje klienta. Przepisać na poll?
-    // server.serve();
+    server.serve(players, rooms, mtx);
 
     cout << "client handler prepared\n";
 
@@ -78,7 +80,12 @@ void handleClients(){
 
 int main(){
 
+    for(int i = 0; i < 20; i++){
+        players[i] = Player();
+    }
+
     std::thread serveR(serveRooms);
+    sleep(1);
     std::thread serveC(handleClients);
     
     
