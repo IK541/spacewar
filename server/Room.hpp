@@ -11,7 +11,7 @@ class Room {
 public:
     static const int max_players = 6;
     static const int max_rooms = 3;
-    static int free_room_id;
+    static int free_room_id; // only to generate rooms
     static Room rooms[ max_rooms ];
     int id;
     Player players[max_players];
@@ -24,4 +24,6 @@ public:
     int getReadyPlayers();
     int getPlayerCount();
     bool startGame();
+
+    void remove_player(int player_id);
 };

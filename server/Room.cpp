@@ -54,4 +54,17 @@ bool Room::startGame() {
     return true;
 }
 
+void Room::remove_player(int player_id) {
+    // find thhe player in room
+    for(int i = 0; i < max_players; i++){
+        if(players[i].fd == player_id){
+            room_slots[i] = false;
+            printf("Player %d has left the room %d\n", player_id, id);
+            return;
+        }
+    }
+
+    printf("Player %d not found in room %d\n", player_id, id);
+    perror("Player not found in room");
+}
 

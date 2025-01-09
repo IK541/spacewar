@@ -262,6 +262,11 @@ void Serv::disconnect_client(int client_id, pollfd *pfds, bool *free_pfds) {
     pfds[client_id].fd = -1;
     pfds[client_id].events = 0;
     free_pfds[client_id] = false;
+
+    if (Player::players[client_id].room != -1) {
+        int room_id = Player::players[client_id].room;
+        Room::rooms[room_id].remove_player(client_id);
+    }
     Player::players[client_id].make_free();
     std::cout << "Client " << client_id << " has been disconnected.\n";
 }
