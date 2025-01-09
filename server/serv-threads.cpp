@@ -21,6 +21,7 @@ std::mutex mtx;
 
 
 vector<Room> rooms;
+vector<Player> players;
 
 
 void logic(int room_id){
