@@ -2,7 +2,6 @@
 #include <thread>
 #include <time.h>
 #include <mutex>
-#include <vector>
 #include <sys/wait.h>
 
 
@@ -23,18 +22,16 @@ using namespace std;
 std::mutex *mtx = new mutex;
 
 
-
+int Room::free_room_id = 0;
 Room rooms[3];
 Player players[20];
 
 void logic(int room_id){
     printf("room %i is rooming", room_id);
 
-    Room r(room_id);
     mtx->lock();
-    rooms[room_id] = r;
 
-    printf("\n room id:%i ready \n", r.getID());
+    printf("\n room id:%i ready \n", rooms[room_id].getID());
     mtx->unlock();
 }
 
@@ -42,9 +39,9 @@ void logic(int room_id){
 
 void serveRooms(){
     cout << "creating rooms\n";
-    std::thread r1(logic, 1);
-    std::thread r2(logic, 2);
-    std::thread r3(logic, 3);
+    std::thread r1(logic, 0);
+    std::thread r2(logic, 1);
+    std::thread r3(logic, 2);
     
     r1.join();
     r2.join();

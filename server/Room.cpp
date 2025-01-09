@@ -6,12 +6,13 @@
 #include <netinet/in.h>
 #include <string>
 #include "Player.hpp"
+#include <mutex>
 using namespace std;
 
 
 
-Room::Room(int room_id) {
-    id = room_id;
+Room::Room() {
+    id = free_room_id++;
     playing = false;
     for(int i = 0; i < Room::max_players; i++){
         room_slots[i] = false;

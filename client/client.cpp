@@ -1,84 +1,71 @@
 #include <iostream>
 #include <cstring>
-#include <sys/socket.h>
-#include <arpa/inet.h>
 #include <unistd.h>
+#include <arpa/inet.h>
 
-#define PORT 8080
+#define SERVER_IP "127.0.0.1" // Change to your server's IP if running on a different machine
+#define SERVER_PORT 8080      // Change to your server's port
 #define BUFFER_SIZE 1024
 
 int main() {
     int sock = 0;
     struct sockaddr_in server_address;
-    char buffer[BUFFER_SIZE] = {0};
 
     // Create socket
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        perror("Socket creation error");
+        std::cerr << "Socket creation error\n";
         return -1;
     }
 
     server_address.sin_family = AF_INET;
-    server_address.sin_port = htons(PORT);
+    server_address.sin_port = htons(SERVER_PORT);
 
-    // Convert IPv4 address from text to binary form
-    if (inet_pton(AF_INET, "127.0.0.1", &server_address.sin_addr) <= 0) {
-        perror("Invalid address or address not supported");
+    // Convert IPv4 and IPv6 addresses from text to binary form
+    if (inet_pton(AF_INET, SERVER_IP, &server_address.sin_addr) <= 0) {
+        std::cerr << "Invalid address or address not supported\n";
         return -1;
     }
 
     // Connect to the server
     if (connect(sock, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
-        perror("Connection failed");
+        std::cerr << "Connection to the server failed\n";
         return -1;
     }
 
     std::cout << "Connected to the server.\n";
-    //              send  nick            
-    std::cout << "enter nick:\n";
-    std::string nick;
 
-    std::cin.getline(buffer, BUFFER_SIZE);
-    std::cout << "sending ur nick: " << nick << "\n";
+    // Test messages
+    const char *messages[] = {
+        "A Mynick!", // Should match the 'A' case
+        "B Give me rooms",   // Should match the 'B' case
+        "C Join room 1",     // Should match the 'C' case
+        "D Ready!", // Should go to the default case
+        nullptr                 // End of messages
+    };
 
-    send(sock, buffer, strlen(buffer), 0);
-    std::cout << "sent \n";
+    for (int i = 0; messages[i] != nullptr; ++i) {
+        // Send message
+        send(sock, messages[i], strlen(messages[i]), 0);
+        std::cout << "Sent: " << messages[i] << "\n";
 
-
-    memset(buffer, 0, BUFFER_SIZE);
-
-
-
-        //              get rooms            
-
-    std::cout << "getting room info" << "\n";
-    
-    memset(buffer, 0, BUFFER_SIZE);
-    int bytes_read = read(sock, buffer, BUFFER_SIZE);
-    if (bytes_read <= 0) {
-        std::cout << "Blad odczytu.\n";
-    }
-    std::cout << "Received from client: \n" << buffer;
-    std::cin >> buffer;
-
-
-
-
-    // Send messages
-    while (true) {
-        std::cout << "Enter message: ";
-        std::cin.getline(buffer, BUFFER_SIZE);
-        send(sock, buffer, strlen(buffer), 0);
-
-        memset(buffer, 0, BUFFER_SIZE);
-        int bytes_read = read(sock, buffer, BUFFER_SIZE);
-        if (bytes_read <= 0) {
-            std::cout << "Server disconnected.\n";
+        // Receive response
+        char buffer[BUFFER_SIZE] = {0};
+        int bytes_received = recv(sock, buffer, BUFFER_SIZE - 1, 0);
+        if (bytes_received > 0) {
+            buffer[bytes_received] = '\0';
+            std::cout << "Server response: " << buffer << "\n";
+        } else {
+            std::cerr << "Failed to receive response or connection closed.\n";
             break;
         }
-        std::cout << "Echo from server: " << buffer << "\n";
+
+        // Sleep for a short time to simulate delay between messages
+        sleep(1);
     }
 
+    // Close the connection
     close(sock);
+    std::cout << "Disconnected from the server.\n";
+
     return 0;
 }

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdio>
 #include <unistd.h> // for sleep
 #include <sys/socket.h>
