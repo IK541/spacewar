@@ -1,5 +1,4 @@
-#ifndef ROOM_H
-#define ROOM_H
+#pragma once
 
 #include <vector>
 #include <cstdio>
@@ -8,7 +7,10 @@ using namespace std;
 
 class Player {
 public:
-    bool ready; 
+    bool ready;
+    // team will be added
+    // name will be added
+    // socket will be added
 };
 
 class Room {
@@ -24,5 +26,3 @@ public:
     int getPlayerCount();
     bool startGame();
 };
-
-#endif

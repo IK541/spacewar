@@ -7,13 +7,14 @@ Room::Room(int room_id) {
     playing = false;
 }
 
+// will be changed to get room info
 int Room::getID() {
     return id;
 }
 
 int Room::getReadyPlayers() {
     int ready = 0;
-    for (int i = 0; i < players.size(); i++) {
+    for (unsigned i = 0; i < players.size(); i++) {
         if (players[i].ready)
             ready++;
     }

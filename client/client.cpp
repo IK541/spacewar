@@ -1,74 +1,84 @@
-#include <SFML/Window.hpp>
-#include <SFML/Graphics.hpp>
-#include <SFML/Network.hpp>
+#include <iostream>
+#include <cstring>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 
-#include "user_input.hpp"
-#include "draw.hpp"
-
-#define FPS 100
-#define WINDOW_SIZE 800
-#define SIGHT_LIMIT 5
-
-#define SERVER_ADDR "127.0.0.1"
-#define SERVER_PORT 10000
-
-#define TEST_SIZE 1.f
-
-void resize_window(sf::RenderWindow* window, sf::Event* event, float sight_limit);
+#define PORT 8080
+#define BUFFER_SIZE 1024
 
 int main() {
-    // Window
-    sf::RenderWindow window(sf::VideoMode(WINDOW_SIZE, WINDOW_SIZE), "Spacewar");
-    window.setFramerateLimit(FPS);
+    int sock = 0;
+    struct sockaddr_in server_address;
+    char buffer[BUFFER_SIZE] = {0};
 
-    // Drawing
-    Drawer drawer;
-    Ship ship1(1,vec2{1.0,0.0},vec2{0.0,0.0},0.0,NULL,false);
-    Ship ship2(4,vec2{-1.0,0.0},vec2{0.0,0.0},0.0,NULL,false);
-    Asteroid asteroid(ASTEROIDS_BEGIN,vec2{0.0,0.0},vec2{5.0,5.0});
-    drawer.add(&ship1);
-    drawer.add(&ship2);
-    drawer.add(&asteroid);
-
-    // Network
-    sf::UdpSocket socket;
-    sf::IpAddress addr = SERVER_ADDR;
-    unsigned short port = SERVER_PORT;
-
-    // input
-    MockGameState game_state;
-    InputCollector input_collector(&window);
-    InputTranslator input_translator(&game_state, &window);
-
-    while (window.isOpen()) {
-        // init phase
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed) window.close();
-            if (event.type == sf::Event::Resized) resize_window(&window, &event, SIGHT_LIMIT);
-        }
-
-        // server phase
-
-        // draw phase
-        window.clear();
-        drawer.draw(&window);
-        window.display();
-
-        // user phase
-        UserInput user_input = input_collector.collect();
-        SendData out_data = input_translator.translate(user_input);
-        uint8_t* binary_out_data = UdpOutputTranslator(out_data.udp_data);
-        if (socket.send(binary_out_data, sizeof(UdpSendData), addr, port) != sf::Socket::Done) printf("UDP error\n");
-        delete binary_out_data;
+    // Create socket
+    if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        perror("Socket creation error");
+        return -1;
     }
 
-    return 0;
-}
+    server_address.sin_family = AF_INET;
+    server_address.sin_port = htons(PORT);
 
-void resize_window(sf::RenderWindow* window, sf::Event* event, float sight_limit) {
-    sf::Vector2f window_size = sf::Vector2f(sf::Vector2u(event->size.width, event->size.height));
-    float vx = SIGHT_LIMIT/sqrtf(1+(window_size.y*window_size.y)/(window_size.x*window_size.x));
-    float vy = SIGHT_LIMIT/sqrtf(1+(window_size.x*window_size.x)/(window_size.y*window_size.y));
-    window->setView(sf::View(sf::FloatRect(-vx, -vy, 2*vx, 2*vy)));
+    // Convert IPv4 address from text to binary form
+    if (inet_pton(AF_INET, "127.0.0.1", &server_address.sin_addr) <= 0) {
+        perror("Invalid address or address not supported");
+        return -1;
+    }
+
+    // Connect to the server
+    if (connect(sock, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
+        perror("Connection failed");
+        return -1;
+    }
+
+    std::cout << "Connected to the server.\n";
+    //              send  nick            
+    std::cout << "enter nick:\n";
+    std::string nick;
+
+    std::cin.getline(buffer, BUFFER_SIZE);
+    std::cout << "sending ur nick: " << nick << "\n";
+
+    send(sock, buffer, strlen(buffer), 0);
+    std::cout << "sent \n";
+
+
+    memset(buffer, 0, BUFFER_SIZE);
+
+
+
+        //              get rooms            
+
+    std::cout << "getting room info" << "\n";
+    
+    memset(buffer, 0, BUFFER_SIZE);
+    int bytes_read = read(sock, buffer, BUFFER_SIZE);
+    if (bytes_read <= 0) {
+        std::cout << "Blad odczytu.\n";
+    }
+    std::cout << "Received from client: \n" << buffer;
+    std::cin >> buffer;
+
+
+
+
+    // Send messages
+    while (true) {
+        std::cout << "Enter message: ";
+        std::cin.getline(buffer, BUFFER_SIZE);
+        send(sock, buffer, strlen(buffer), 0);
+
+        memset(buffer, 0, BUFFER_SIZE);
+        int bytes_read = read(sock, buffer, BUFFER_SIZE);
+        if (bytes_read <= 0) {
+            std::cout << "Server disconnected.\n";
+            break;
+        }
+        std::cout << "Echo from server: " << buffer << "\n";
+    }
+
+    close(sock);
+    return 0;
 }

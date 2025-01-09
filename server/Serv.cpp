@@ -1,4 +1,3 @@
-#pragma once
 #include "Serv.hpp"
 
 #include <cstring>
@@ -20,7 +19,6 @@ Serv::Serv(int _port){
         port = _port;
         opt = 1;
         addrlen = sizeof(address);
-        buffer_size = 1024;
 
         if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
             perror("Socket failed");
@@ -89,9 +87,9 @@ void Serv::serve(){
 
 
 void Serv::handle_client(int client_fd){
-    char buffer[buffer_size] = {0};
+    char buffer[BUFFER_SIZE] = {0};
 
-    memset(buffer, 0, buffer_size);
+    memset(buffer, 0, BUFFER_SIZE);
 
     // get nickname
     std::string nickname;
@@ -99,13 +97,13 @@ void Serv::handle_client(int client_fd){
 
     send(client_fd, msg.c_str(), strlen(msg.c_str()), 0);
 
-    int bytes_read = read(client_fd, buffer, buffer_size);
+    int bytes_read = read(client_fd, buffer, BUFFER_SIZE);
         if (bytes_read <= 0) {
             std::cout << "nick error disconnected.\n";
         }
 
     nickname = std::string(buffer, bytes_read - 1);
-    memset(buffer, 0, buffer_size);
+    memset(buffer, 0, BUFFER_SIZE);
 
     std::cout << "nick got:" << nickname << "\n";
 
@@ -115,8 +113,8 @@ void Serv::handle_client(int client_fd){
 
     
     while (true) {
-        memset(buffer, 0, buffer_size);
-        int bytes_read = read(client_fd, buffer, buffer_size);
+        memset(buffer, 0, BUFFER_SIZE);
+        int bytes_read = read(client_fd, buffer, BUFFER_SIZE);
         if (bytes_read <= 0) {
             std::cout << "Client disconnected.\n";
             break;
