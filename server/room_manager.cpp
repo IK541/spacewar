@@ -1,6 +1,15 @@
 #include <cmath>
 #include "room_manager.hpp"
 
+#pragma pack(push, 1)
+struct CompressedMovable {
+    uint8_t id;
+    uint16_t x;
+    uint16_t y;
+    uint8_t angle;
+};
+#pragma pack(pop)
+
 uint8_t* UdpOutputTranslator(GameOut output) {
     int size = 18 + (output.movables_count) * sizeof(CompressedMovable);
     uint8_t* bytes = new uint8_t[size];

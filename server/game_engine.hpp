@@ -14,6 +14,11 @@
 #define SHIP_ROTATION 0.1
 #define SHIP_ACCELERATION 0.1
 
+#define NO_WIN 0
+#define BLUE_WIN 2
+#define DRAW 1
+#define RED_WIN 3
+
 // predeclared
 class Player;
 class Movables;
@@ -139,9 +144,12 @@ class GameEngine {
     Movables movables;
     Collider grid;
     GameEngine();
-    void update_physics(double dt);
+    int update_physics(double dt); // returns winner
     void update_input(int ship_id, GameIn input);
     GameOut get_output(int ship_id);
+    void set_ship(int ship_id);
+    void unset_ship(int ship_id);
     private:
     Player* get_player(int ship_id);
+    int get_winner();
 };

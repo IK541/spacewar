@@ -51,6 +51,7 @@ int main() {
     socklen_t caddr_size = sizeof(caddr);
 
     GameEngine game_engine;
+    game_engine.set_ship(SHIP_ID);
 
     uint8_t buffer[BUFFER_SIZE];
     recvfrom(sfd, buffer, BUFFER_SIZE, 0, (sockaddr*) &caddr, &caddr_size);

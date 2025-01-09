@@ -7,7 +7,7 @@
 Player::Player(int player_id, Ship* ship):id(player_id),ship(ship),
 ammo(MAX_AMMO),reload(0),rearm(0),respawn(RESPAWN_TIME),current_bullet(0),
 last_input(GameIn{0,(float)(ship->id<RED_TEAM_BEGIN?M_PI_2:-M_PI_2),false,false}){
-    ship->player = this;
+    ship->player = NULL;
 }
 
 Player::Player():id(0),ship(NULL),
@@ -60,7 +60,9 @@ PlayerData Player::generate_player_data() {
 void Collider::update_collisions(Movables* movables) {
     // ship - bullet
     for(int id1 = BLUE_TEAM_BEGIN; id1 < BLUE_BULLETS_BEGIN; ++id1) for(int id2 = BLUE_BULLETS_BEGIN; id2 < ASTEROIDS_BEGIN; ++id2) {
-        Ship* ship = (Ship*)(movables->items[id1-1]); Bullet* bullet = (Bullet*)(movables->items[id2-1]);
+        Ship* ship = (Ship*)(movables->items[id1-1]);
+        if(!ship->player) continue;
+        Bullet* bullet = (Bullet*)(movables->items[id2-1]);
         vec2 p1 = ship->position; vec2 p2 = bullet->position;
         if((p1.x-p2.x)*(p1.x-p2.x)+(p1.y-p2.y)*(p1.y-p2.y)<(SHIP_SIZE+BULLET_SIZE)*(SHIP_SIZE+BULLET_SIZE)) {
             movables->respawn(ship); bullet->position = vec2{INFINITY, INFINITY}; bullet->lifetime = 0;
@@ -68,7 +70,9 @@ void Collider::update_collisions(Movables* movables) {
     }
     // ship - asteroid
     for(int id1 = BLUE_TEAM_BEGIN; id1 < BLUE_BULLETS_BEGIN; ++id1) for(int id2 = ASTEROIDS_BEGIN; id2 <= TOTAL_ENTITIES; ++id2) {
-        Ship* ship = (Ship*)(movables->items[id1-1]); Asteroid* asteroid = (Asteroid*)(movables->items[id2-1]);
+        Ship* ship = (Ship*)(movables->items[id1-1]);
+        if(!ship->player) continue;
+        Asteroid* asteroid = (Asteroid*)(movables->items[id2-1]);
         vec2 p1 = ship->position; vec2 p2 = asteroid->position;
         if((p1.x-p2.x)*(p1.x-p2.x)+(p1.y-p2.y)*(p1.y-p2.y)<(SHIP_SIZE+ASTEROID_SIZE)*(SHIP_SIZE+ASTEROID_SIZE)) {
             movables->respawn(ship); movables->add_asteroid(id2);
@@ -106,6 +110,7 @@ void Collider::update_base(Movables* movables, Base* base, vec2 where, bool side
         vec2 pos = movables->items[id-1]->position;
         if((pos.x-where.x)*(pos.x-where.x)+(pos.y-where.y)*(pos.y-where.y)<BASE_RADIUS*BASE_RADIUS && get_side(id) == side) {
             Player* player = ((Player*)((Ship*)movables->items[id-1])->player);
+            if(player == NULL) continue;
             if(player->rearm) --player->rearm;
             else if(player->ammo < MAX_AMMO) {
                 ++player->ammo;
@@ -122,7 +127,9 @@ Neighbours Collider::get_neighbours(Movables* movables, Player* player) {
         Movable* movable = movables->items[id-1];
         vec2 pos = movable->position;
         if((pos.x-sp.x)*(pos.x-sp.x)+(pos.y-sp.y)*(pos.y-sp.y)<SIGHT_LIMIT*SIGHT_LIMIT) {
-            double angle = get_type(id) == TYPE_SHIP ? ((Ship*)movable)->angle : get_type(id) == TYPE_BULLET ? ((Bullet*)movable)->angle : 0.0;
+            int type = get_type(id);
+            if(type == TYPE_SHIP && ((Ship*)movable)->player == NULL) continue;
+            double angle = type == TYPE_SHIP ? ((Ship*)movable)->angle : get_type(id) == TYPE_BULLET ? ((Bullet*)movable)->angle : 0.0;
             objects->push_back(new SpaceObject{id, pos.x, pos.y, angle});
         }
     }
@@ -220,6 +227,7 @@ void Movables::respawn(Ship* ship) {
         vec2{ SPAWN_RADIUS*cos(angle), BASE_DIST+SPAWN_RADIUS*sin(angle) } :
         vec2{ -SPAWN_RADIUS*cos(angle), -BASE_DIST-SPAWN_RADIUS*sin(angle) };
     ship->speed = vec2{0.0,0.0};
+    if(((Player*)ship->player) == NULL) return;
     ((Player*)ship->player)->ammo = MAX_AMMO;
     ((Player*)ship->player)->respawn = RESPAWN_TIME;
 }
@@ -255,17 +263,15 @@ GameEngine::GameEngine():timestamp(0),movables(rand_from_time()) {
     this->blue.size = 0;
     for(int id = BLUE_TEAM_BEGIN; id < RED_TEAM_BEGIN; ++id) {
         this->blue.players[id-BLUE_TEAM_BEGIN] = Player(-1, (Ship*) this->movables.items[id-1]);
-        this->blue.players[id-BLUE_TEAM_BEGIN].ship->player = this->blue.players+id-BLUE_TEAM_BEGIN;
     }
     this->red.base.hp = BASE_HP;
     this->red.size = 0;
     for(int id = RED_TEAM_BEGIN; id < BLUE_BULLETS_BEGIN; ++id) {
         this->red.players[id-RED_TEAM_BEGIN] = Player(-1, (Ship*) this->movables.items[id-1]);
-        this->red.players[id-RED_TEAM_BEGIN].ship->player = this->red.players+id-RED_TEAM_BEGIN;
     }
 }
 
-void GameEngine::update_physics(double dt) {
+int GameEngine::update_physics(double dt) {
     ++this->timestamp;
     for(int i = 0; i < PLAYERS_PER_TEAM; ++i) {
         Player* player = this->blue.players + i;
@@ -284,10 +290,18 @@ void GameEngine::update_physics(double dt) {
     this->grid.update_base(&this->movables,&this->blue.base,vec2{0,BASE_DIST},false);
     this->grid.update_base(&this->movables,&this->red.base,vec2{0,-BASE_DIST},true);
     this->grid.update_collisions(&this->movables);
+    return this->get_winner();
+}
+
+int GameEngine::get_winner() {
+    return !this->blue.base.hp ? BLUE_WIN :
+        !this->red.base.hp ? RED_WIN :
+        !this->timestamp ? DRAW : NO_WIN;
 }
 
 void GameEngine::update_input(int ship_id, GameIn input) {
     Player* player = get_player(ship_id);
+    if(player == NULL) return;
     if(input.timestamp > player->last_input.timestamp)
         player->last_input = input;
 }
@@ -297,8 +311,8 @@ GameOut GameEngine::get_output(int ship_id) {
     uint32_t timestamp = this->timestamp;
     Base blue = this->blue.base;
     Base red = this->red.base;
-    PlayerData player_data = player->generate_player_data();
-    Neighbours neighbours = this->grid.get_neighbours(&this->movables,player);
+    PlayerData player_data = player != NULL ? player->generate_player_data() : PlayerData {0,0,0,0,0};
+    Neighbours neighbours = player != NULL ? this->grid.get_neighbours(&this->movables,player) : Neighbours {0, new std::vector<SpaceObject*>};
     return GameOut {
         timestamp,
         blue.hp,
@@ -311,6 +325,22 @@ GameOut GameEngine::get_output(int ship_id) {
         neighbours.count,
         neighbours.movables
     };
+}
+
+void GameEngine::set_ship(int ship_id) {
+    if(BLUE_TEAM_BEGIN <= ship_id && ship_id < RED_TEAM_BEGIN) {
+        this->blue.players[ship_id-BLUE_TEAM_BEGIN].ship->player = this->blue.players+ship_id-BLUE_TEAM_BEGIN;
+    } else if(RED_TEAM_BEGIN <= ship_id && ship_id < BLUE_BULLETS_BEGIN) {
+        this->blue.players[ship_id-RED_TEAM_BEGIN].ship->player = this->blue.players+ship_id-RED_TEAM_BEGIN;
+    }
+}
+
+void GameEngine::unset_ship(int ship_id) {
+    if(BLUE_TEAM_BEGIN <= ship_id && ship_id < RED_TEAM_BEGIN) {
+        this->blue.players[ship_id-BLUE_TEAM_BEGIN].ship->player = NULL;
+    } else if(RED_TEAM_BEGIN <= ship_id && ship_id < BLUE_BULLETS_BEGIN) {
+        this->red.players[ship_id-RED_TEAM_BEGIN].ship->player = NULL;
+    }
 }
 
 Player* GameEngine::get_player(int player_id) {
