@@ -25,5 +25,8 @@ public:
     int getPlayerCount();
     bool startGame();
 
+
+    static string getGeneralRoomInfo();
+
     void remove_player(int player_id);
 };

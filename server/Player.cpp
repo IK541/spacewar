@@ -25,3 +25,8 @@ void Player::make_free(){
     room = -1;
     free = true;
 }
+
+
+    void Player::setNick(char buffer[1024]){
+        nick = buffer;
+    }

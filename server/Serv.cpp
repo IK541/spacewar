@@ -206,6 +206,7 @@ void Serv::handle_new_connection(pollfd pfds[], bool free_pfds[], int server_fd)
 
 void Serv::handle_client_input(int client_id, pollfd *pfds, bool *free_pfds) {
     char buffer[1024];
+    string msg = "";
     int bytes_read = recv(pfds[client_id].fd, buffer, sizeof(buffer) - 1, 0);
 
     if (bytes_read <= 0) {
@@ -228,25 +229,31 @@ void Serv::handle_client_input(int client_id, pollfd *pfds, bool *free_pfds) {
         switch (first_char) {
             case 'A':
             case 'a':
-                std::cout << "Client " << client_id << " sent an 'A'-type message.\n";
+                std::cout << "Client " << client_id << " sent an 'A'-type message: nick.\n";
                 // Handle 'A' type message
+                Player::players[client_id].setNick(buffer + 1);
                 send(pfds[client_id].fd, "Acknowledged A\n", 14, 0);
                 break;
 
             case 'B':
             case 'b':
-                std::cout << "Client " << client_id << " sent a 'B'-type message.\n";
+                std::cout << "Client " << client_id << " sent a 'B'-type message: get room info.\n";
                 // Handle 'B' type message
-                send(pfds[client_id].fd, "Acknowledged B\n", 14, 0);
+                msg = Room::getGeneralRoomInfo();
+                
+                send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
                 break;
 
             case 'C':
             case 'c':
-                std::cout << "Client " << client_id << " sent a 'C'-type message.\n";
+                std::cout << "Client " << client_id << " sent a 'C'-type message: choosed room.\n";
                 // Handle 'C' type message
+                // TODO implement room choosing
+                // Send room details to player
                 send(pfds[client_id].fd, "Acknowledged C\n", 14, 0);
                 break;
-
+            // TODO change ready state
+            // TODO change game
             default:
                 std::cout << "Client " << client_id << " sent an unrecognized message type: " << first_char << "\n";
                 send(pfds[client_id].fd, "Unrecognized command\n", 21, 0);
@@ -273,7 +280,7 @@ void Serv::disconnect_client(int client_id, pollfd *pfds, bool *free_pfds) {
 
 void Serv::handle_client_output(int client_id, pollfd *pfds, bool *free_pfds) {
     // Example: Send a queued message
-    std::string msg = "Server response\n";
+    std::string msg = "Server new night response\n";
     send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
 }
 

@@ -68,3 +68,17 @@ void Room::remove_player(int player_id) {
     perror("Player not found in room");
 }
 
+string Room::getGeneralRoomInfo() {
+    string info = "Room info: ";
+
+    for(int i = 0; i < max_rooms; i++){
+        info += "ID: " + to_string(rooms[i].id) + "\n";
+        info += "Players: " + to_string(rooms[i].getPlayerCount()) + "\n";
+        info += "Ready: " + to_string(rooms[i].getReadyPlayers()) + "\n";
+        info += "Started: " + to_string(rooms[i].playing) + "\n";
+    }
+
+    
+    
+    return info;
+}

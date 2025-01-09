@@ -29,6 +29,7 @@ public:
 
     void make_free();
 
+    void setNick(char buffer[1024]);
     static int find_free_slot_serv(){
         
         for(int i = 0; i < max_players; i++){
