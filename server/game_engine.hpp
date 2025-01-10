@@ -138,11 +138,6 @@ struct Team {
 
 class GameEngine {
     public:
-    int timestamp;
-    Team blue;
-    Team red;
-    Movables movables;
-    Collider grid;
     GameEngine();
     int update_physics(double dt); // returns winner
     void update_input(int ship_id, GameIn input);
@@ -150,6 +145,13 @@ class GameEngine {
     void set_ship(int ship_id);
     void unset_ship(int ship_id);
     private:
+    int timestamp;
+    Team blue;
+    Team red;
+    Movables movables;
+    Collider grid;
     Player* get_player(int ship_id);
     int get_winner();
 };
+
+#define OUTPUT_HEAD_SIZE 18
