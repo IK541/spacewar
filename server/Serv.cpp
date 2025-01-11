@@ -59,7 +59,7 @@ void Serv::serve(){
 
 
     std::cout << "Server is listening on port " << port << "...\n";
-    while (true) {
+    while (work) {
         int num_events = poll(pfds, MAX_CLIENTS + 1, -1);
         if (num_events < 0) {
             perror("Poll failed");
@@ -261,10 +261,11 @@ void Serv::handle_client_input(int client_id) {
 
 void Serv::disconnect_client(int client_id) {
     lock_guard<std::mutex> lock(mtx);
-    events.push("0" + std::to_string(Player::players[client_id].room));
+    events.push("0" + std::to_string(Player::players[client_id].room)); // FAILS HERE
     cv.notify_one();
 
-    close(pfds[client_id].fd);
+    if(pfds[client_id].fd > 0)
+        close(pfds[client_id].fd);
     pfds[client_id].fd = -1;
     pfds[client_id].events = 0;
     free_pfds[client_id] = false;
@@ -288,8 +289,19 @@ void Serv::handle_client_output(int client_id) {
 
 void Serv::cleanup(){
 
+    Serv::work = false;
+
+    lock_guard<std::mutex> server_lock(Serv::mtx);
+    lock_guard<std::mutex> room_lock(Room::rooms_mutex);
+    for(int i = 0; i < Player::max_players; ++i)
+        Player::players[i].mtx.lock();
+
     shutdown(server_fd, SHUT_RDWR);
     close(server_fd);
+
+    for(int i = Player::max_players; i >= 0; i--) {
+        Player::players[i].make_free();
+    }
 
     for(int i = Player::max_players; i >= 0; i--){
         if (pfds[i].fd == -1) continue;
@@ -297,12 +309,15 @@ void Serv::cleanup(){
         close(pfds[i].fd);
     }
 
-    for(int i = 0; i < Player::max_players; i++){
-        if(Player::players[i].fd != -1) {        
-            shutdown(Player::players[i].fd, SHUT_RDWR);
-            close(Player::players[i].fd);
-            }
-        }
+    // for(int i = 0; i < Player::max_players; i++){
+    //     if(Player::players[i].fd != -1) {        
+    //         shutdown(Player::players[i].fd, SHUT_RDWR);
+    //         close(Player::players[i].fd);
+    //     }
+    // }
+
+    for(int i = 0; i < Player::max_players; ++i)
+        Player::players[i].mtx.unlock();
 }
 
 
@@ -351,6 +366,6 @@ void Serv::send_to_lobby_members(){
 
 
 void Serv::send_to_player(int player_id, string msg){
-    lock_guard<std::mutex> lock(Player::players[player_id].mtx);
+    lock_guard<std::mutex> lock(Player::players[player_id].mtx); // PLAYER MUTEX
     send(pfds[player_id].fd, msg.c_str(), msg.size(), 0);
 }

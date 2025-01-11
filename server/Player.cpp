@@ -24,10 +24,14 @@ void Player::take(sockaddr_in _address, int _fd){
 
 void Player::make_free(){
     address = {};
+    if(fd > 0) {
+        shutdown(fd, SHUT_RDWR);
+        close(fd);
+    }
     fd = -1;
     ready = false;
     team = 0;
-    nick = "free player";
+    // nick = ""; //"free player";
     room = -1;
     free = true;
 }

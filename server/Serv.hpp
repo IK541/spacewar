@@ -23,9 +23,11 @@ class Serv {
 
     public:
 
+    static bool work;
+
     pollfd pfds[Player::max_players + 1]{};
     bool free_pfds[Player::max_players]{};
-    std::mutex mtx;
+    static std::mutex mtx;
     std::condition_variable cv;
     std::queue<std::string> events;
     bool stop = false;

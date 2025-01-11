@@ -19,8 +19,6 @@ public:
     int teams_player_number[2];
 
     static mutex rooms_mutex;
-    mutex room_mtx;
-    mutex game_mtx; //TODO  semafor to implement
 
     Room();
 

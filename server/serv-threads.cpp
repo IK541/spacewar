@@ -20,6 +20,8 @@ using namespace std;
 // #define MAX_CLIENTS_PER_ROOM 8
 
 std::mutex Room::rooms_mutex;
+std::mutex Serv::mtx;
+bool Serv::work = true;
 
 
 int Room::free_room_id = 0;
