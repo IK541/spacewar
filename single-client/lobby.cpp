@@ -8,16 +8,18 @@ void draw_name(NameState name_state, sf::RenderWindow* window, sf::Font* font, s
     sf::RectangleShape name_field = sf::RectangleShape(sf::Vector2f(1.6*VIEW_SIZE,0.2*VIEW_SIZE));
     name_field.move(sf::Vector2f(0.2*VIEW_SIZE,0.9*VIEW_SIZE));
     name_field.setFillColor(sf::Color(63,63,63));
+
+    sf::Text error(name_state.failed ? std::string("NAME ALREADY IN USE") : std::string(), *font, 120);
+    error.setFillColor(sf::Color::Red);
+    error.move(0.21*VIEW_SIZE,0.75*VIEW_SIZE);
     
-    sf::Text text;
-    text.setFont(*font);
-    text.setString(name_state.name.c_str());
-    text.setCharacterSize(240);
+    sf::Text text(name_state.name.c_str(), *font, 240);
     text.setFillColor(sf::Color::Yellow);
     text.move(0.21*VIEW_SIZE,0.85*VIEW_SIZE);
 
     window->clear();
     window->draw(name_field);
+    window->draw(error);
     window->draw(text);
     window->display();
 }

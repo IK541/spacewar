@@ -140,6 +140,7 @@ int main() {
     // State init
     state = STATE_NAME;
     name_state.name = std::string();// std::string("BEG-TEST-END");
+    name_state.failed = true;
     lobby_state.room_selected = 1;
     lobby_state.rooms = std::vector<RoomInfo>();
     lobby_state.rooms.push_back(RoomInfo{0,0,2,2});
