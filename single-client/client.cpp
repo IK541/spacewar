@@ -8,6 +8,7 @@
 #include "game_in.hpp"
 #include "game_out.hpp"
 #include "lobby.hpp"
+#include "../resources/font.h"
 
 #define WINDOW_SIZE 800
 
@@ -26,10 +27,13 @@
 #define STATE_ROOM 2
 #define STATE_GAME 3
 
+#define MAX_NICK_LENGTH 12
+
 // globals
 sf::Vector2f window_size = sf::Vector2f(WINDOW_SIZE, WINDOW_SIZE);
 sf::RenderWindow window(sf::VideoMode((unsigned)window_size.x, (unsigned)window_size.y), "Spacewar");
 
+std::mutex mtx;
 int state;
 NameState name_state;
 LobbyState lobby_state;
@@ -62,6 +66,7 @@ void tcp_receiver() {
     while(1) {
         tcp_socket.receive(buffer, BUFFER_SIZE, size);
         // TODO: handle tcp data
+        std::lock_guard<std::mutex> lock(mtx);
     }
 }
 
@@ -71,7 +76,39 @@ void handle_events() {
         if (event.type == sf::Event::Closed) window.close();
         if (event.type == sf::Event::Resized) resize(&event, &window_size);
         if (event.type == sf::Event::KeyPressed && state != STATE_GAME) {
-            // TODO: handle keyboard
+            std::lock_guard<std::mutex> lock(mtx);
+            if(state == STATE_NAME && name_state.name.size() < MAX_NICK_LENGTH) {
+                if(event.key.code >= 0 && event.key.code < 26) name_state.name.push_back('A' + event.key.code);
+                if(event.key.code >= 26 && event.key.code < 36) name_state.name.push_back('0' + event.key.code - 26);
+                if(event.key.code == 56) name_state.name.push_back('-');
+            }
+            if(state == STATE_NAME && event.key.code == 59 && name_state.name.size()) name_state.name.pop_back();
+            if(state == STATE_NAME && event.key.code == 58) {
+                std::string out = std::string("A");
+                out.push_back(out.size()); // msg len
+                out.append(name_state.name);
+                tcp_socket.send(out.c_str(), out.size());
+            }
+            if(state == STATE_LOBBY && event.key.code == 73) lobby_state.room_selected = (lobby_state.room_selected - 1) % ROOM_COUNT;
+            if(state == STATE_LOBBY && event.key.code == 74) lobby_state.room_selected = (lobby_state.room_selected + 1) % ROOM_COUNT;
+            if(state == STATE_LOBBY && event.key.code == 58) {
+                std::string out = std::string("D");
+                out.push_back(lobby_state.room_selected);
+                tcp_socket.send(out.c_str(), out.size());
+            }
+            if(state == STATE_ROOM && event.key.code == 57) {
+                std::string out = std::string("E");
+                tcp_socket.send(out.c_str(), out.size());
+            }
+            if(state == STATE_ROOM && event.key.code == 58) {
+                std::string out = std::string("F");
+                tcp_socket.send(out.c_str(), out.size());
+            }
+            if(state == STATE_ROOM && event.key.code == 59) {
+                std::string out = std::string("D");
+                out.push_back(-1);
+                tcp_socket.send(out.c_str(), out.size());
+            }
         }
     }
 }
@@ -83,9 +120,8 @@ int main() {
     // Drawing
     GameDrawer drawer;
 
-    // Font - TODO load from memory
     sf::Font font;
-    if (!font.loadFromFile("./target/font.ttf")) {
+    if (!font.loadFromMemory(resources_font_ttf, resources_font_ttf_len)) {
         printf("font error"); return -1;
     }
 
@@ -93,14 +129,17 @@ int main() {
     udp_socket.bind(CLIENT_PORT);
     std::thread recv_thread(udp_receiver);
     recv_thread.detach();
+    // if(tcp_socket.connect(sf::IpAddress(SERVER_ADDR), SERVER_PORT)) {
+    //     printf("connection error"); return -1;
+    // }
 
     // input
     InputCollector input_collector(&window);
     InputTranslator input_translator(&window);
 
     // State init
-    state = STATE_GAME;
-    name_state.name = std::string("BEG-TEST-END");
+    state = STATE_NAME;
+    name_state.name = std::string();// std::string("BEG-TEST-END");
     lobby_state.room_selected = 1;
     lobby_state.rooms = std::vector<RoomInfo>();
     lobby_state.rooms.push_back(RoomInfo{0,0,2,2});
@@ -120,19 +159,18 @@ int main() {
         
         // IN NAME:
         case STATE_NAME:
-        draw_name(name_state, &window, &font);
-        // TODO: user input
+        draw_name(name_state, &window, &font, &mtx);
         break;
 
         // IN LOBBY:
         case STATE_LOBBY:
-        draw_lobby(lobby_state, &window);
+        draw_lobby(lobby_state, &window, &mtx);
         // TODO: user input
         break;
 
         // IN ROOM:
         case STATE_ROOM:
-        draw_room(room_state, &window, &font);
+        draw_room(room_state, &window, &font, &mtx);
         // TODO: user input
         break;
 

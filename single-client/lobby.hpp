@@ -42,7 +42,7 @@ class ClientState {
     ClientState();
 };
 
-void draw_name(NameState name_state, sf::RenderWindow* window, sf::Font* font);
-void draw_lobby(LobbyState lobby_state, sf::RenderWindow* window);
-void draw_room(RoomState room_state, sf::RenderWindow* window, sf::Font* font);
+void draw_name(NameState name_state, sf::RenderWindow* window, sf::Font* font, std::mutex* mtx);
+void draw_lobby(LobbyState lobby_state, sf::RenderWindow* window, std::mutex* mtx);
+void draw_room(RoomState room_state, sf::RenderWindow* window, sf::Font* font, std::mutex* mtx);
 

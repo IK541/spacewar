@@ -2,7 +2,8 @@
 
 #define VIEW_SIZE 1000.0
 
-void draw_name(NameState name_state, sf::RenderWindow* window, sf::Font* font) {
+void draw_name(NameState name_state, sf::RenderWindow* window, sf::Font* font, std::mutex* mtx) {
+    std::lock_guard<std::mutex> lock(*mtx);
     window->setView(sf::View(sf::Vector2f(VIEW_SIZE,VIEW_SIZE), sf::Vector2f(2*VIEW_SIZE,2*VIEW_SIZE)));
     sf::RectangleShape name_field = sf::RectangleShape(sf::Vector2f(1.6*VIEW_SIZE,0.2*VIEW_SIZE));
     name_field.move(sf::Vector2f(0.2*VIEW_SIZE,0.9*VIEW_SIZE));
@@ -21,7 +22,8 @@ void draw_name(NameState name_state, sf::RenderWindow* window, sf::Font* font) {
     window->display();
 }
 
-void draw_lobby(LobbyState lobby_state, sf::RenderWindow* window) {
+void draw_lobby(LobbyState lobby_state, sf::RenderWindow* window, std::mutex* mtx) {
+    std::lock_guard<std::mutex> lock(*mtx);
     window->setView(sf::View(sf::Vector2f(VIEW_SIZE,VIEW_SIZE), sf::Vector2f(2*VIEW_SIZE,2*VIEW_SIZE)));
 
     sf::RectangleShape selection = sf::RectangleShape(sf::Vector2f(1.6*VIEW_SIZE+0.2*VIEW_SIZE/ROOM_COUNT,1.8*VIEW_SIZE/ROOM_COUNT));
@@ -76,7 +78,8 @@ void draw_lobby(LobbyState lobby_state, sf::RenderWindow* window) {
     window->display();
 }
 
-void draw_room(RoomState room_state, sf::RenderWindow* window, sf::Font* font) {
+void draw_room(RoomState room_state, sf::RenderWindow* window, sf::Font* font, std::mutex* mtx) {
+    std::lock_guard<std::mutex> lock(*mtx);
     window->setView(sf::View(sf::Vector2f(VIEW_SIZE,VIEW_SIZE), sf::Vector2f(2*VIEW_SIZE,2*VIEW_SIZE)));
 
     std::vector<sf::RectangleShape> blue;
