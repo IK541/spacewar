@@ -52,9 +52,18 @@ class Serv {
 
     void send_to_room_members(int room_id, string msg);
 
+    void send_to_room_members(int room_id, char* msg, int len);
+
+
     void send_to_lobby_members(string msg);
 
+    void send_to_lobby_members(char* msg, int len);
+
+
     void send_to_player(int player_id, string msg);
+
+    void send_to_player(int player_id, char* msg, int len);
+
 
 
     

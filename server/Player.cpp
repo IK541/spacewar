@@ -51,13 +51,13 @@ string Player::get_binary_player_info(){
 
 
 
-string Player::set_nick(string _nick){
+bool Player::set_nick(string _nick){
 
     for(int i = 0; i < Player::max_players; i++)
-        if(Player::players[i].nick == _nick) return "N\nNick taken\n";
+        if(Player::players[i].nick == _nick) return 0;
 
     nick = _nick;
-    return "Y\nNick set properly\n";
+    return 1;
 }
 
 

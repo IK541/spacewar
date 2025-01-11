@@ -1,5 +1,4 @@
 #include "Serv.hpp"
-#include <cstring>
 #include <sys/socket.h>
 #include <poll.h>
 #include <netinet/in.h>
@@ -10,6 +9,11 @@
 #include <mutex>
 #include "Room.hpp"
 #include "Player.hpp"
+
+#include <queue>
+#include <string>
+#define BUFFER_SIZE 256
+
 
 #define MAX_EVENTS 8
 #define MAX_CLIENTS 20 // >= ROOM_COUNT * PLAYERS_PER_TEAM * 2
@@ -158,24 +162,35 @@ void Serv::handle_client_input(int client_id) {
         switch (first_char) {
             case 'A':
             case 'a':
+            
                 {
-                    lock_guard<std::mutex> lock(mtx);
-                
                 nick = string(buffer).substr(2, bytes_read);
                 std::cout << "Client " << client_id << " sent an 'A'-type message: nick.\n";
                 // receive nick from player
-                msg = Player::players[client_id].set_nick(nick);
+                lock_guard<std::mutex> lock(mtx);
 
-                send_to_player(client_id, msg);
+                if(Player::players[client_id].set_nick(nick)){
+                    vector<char> binary_lobby = Room::get_binary_general_room_info();
+                    char bf[13];
+                    for (int i = 0; i <= 13; i++)
+                        bf[i] = binary_lobby[i];
+
+                    send_to_player(client_id, bf, 13);
+                }
+                else
+                    send_to_player(client_id, "N");
+                
                 }
                 break;
                 
 
             case 'B':
             case 'b':
+
+            
                 std::cout << "Client " << client_id << " sent a 'B'-type message: get room info.\n";
                 // send all rooms info
-                msg = "Y\n";
+                msg = "";
                 
                 msg += Room::get_general_room_info();
                 
@@ -183,21 +198,21 @@ void Serv::handle_client_input(int client_id) {
                 cv.notify_one();
                 break;
 
-            case 'C': // Send room details
-            case 'c':
+            // case 'C': // Send room details
+            // case 'c':
                 
 
 
-                std::cout << "Client " << client_id << " sent a 'C'-type message: get specific room info.\n";
-                if (buffer[2] < '0' && buffer[2] >'3') msg = "N\n";
-                else{
-                    room_char = buffer[2] - '0';
-                    msg += Room::rooms[room_char].get_room_info();
+            //     std::cout << "Client " << client_id << " sent a 'C'-type message: get specific room info.\n";
+            //     if (buffer[2] < '0' && buffer[2] >'3') msg = "N\n";
+            //     else{
+            //         room_char = buffer[2] - '0';
+            //         msg += Room::rooms[room_char].get_room_info();
 
-                }
-                send_to_player(client_id, msg);
-                cv.notify_one();
-                break;
+            //     }
+            //     send_to_player(client_id, msg);
+            //     cv.notify_one();
+            //     break;
             // human like
             case 'Z': // Send room details
             case 'z':
@@ -220,7 +235,7 @@ void Serv::handle_client_input(int client_id) {
                 {
                 lock_guard<std::mutex> lock(mtx);
                 std::cout << "Client " << client_id << " sent a 'D'-type message: enter room.\n";
-                if (buffer[2] < '0' && buffer[2] >'3') msg = "N\n";
+                if (buffer[2] < '0' && buffer[2] >'3') msg = "N";
                 else{
                     room_char = buffer[2] - '0';
 
@@ -261,8 +276,8 @@ void Serv::handle_client_input(int client_id) {
                 msg = Player::players[client_id].change_ready_state();
                 if(msg[0] == 'Y')
                         events.push("1" + std::to_string(Player::players[client_id].room));// FAILS HERE
-
-                send_to_player(client_id, msg);
+                else
+                    send_to_player(client_id, "N");
                 cv.notify_one();
                 }
                 break;
@@ -277,7 +292,8 @@ void Serv::handle_client_input(int client_id) {
 
 void Serv::disconnect_client(int client_id) {
     lock_guard<std::mutex> lock(mtx);
-    events.push("0" + std::to_string(Player::players[client_id].room));
+    if (Player::players[client_id].room != -1)
+        events.push("0" + std::to_string(Player::players[client_id].room));
     cv.notify_one();
 
     if(pfds[client_id].fd > 0)
@@ -341,17 +357,27 @@ void Serv::monitor(){
 
         while (!events.empty()) {
             string msg = "";
-                        // events type:= 0:join 1:sw team 2:ready 3:dc 4:start 
+            vector<char> binary_lobby;
+                        // events type:= 0: detailed, 1: general
             string event = events.front();
-            cout << "detecten event: " << event << endl;
-            if(event[0] == '0'){
-                msg = Room::rooms[stoi(event.substr(1))].get_room_info();
-                send_to_room_members(stoi(event.substr(1)), msg);
-
+            cout << "detected event: " << event << endl;
+            if(event[0] == '0'){ // detailed room info update
+                binary_lobby = Room::rooms[stoi(event.substr(1))].get_room_info();
+                int len = binary_lobby.size();
+                char msg_bin_room[len];
+                for(unsigned int i = 0; i < binary_lobby.size(); i++){
+                    msg_bin_room[i] = binary_lobby[i];
+                }
+                send_to_room_members(stoi(event.substr(1)), msg_bin_room, binary_lobby.size());
             }
 
-            msg = Room::get_general_room_info();
-            send_to_lobby_members(msg);
+
+            char msg_bin[13];
+            binary_lobby = Room::get_binary_general_room_info();
+            for(int i = 0; i < 14; i++){
+                msg_bin[i] = binary_lobby[i];
+            }
+            send_to_lobby_members(msg_bin, 13);
 
             events.pop();
         }
@@ -371,6 +397,13 @@ void Serv::send_to_room_members(int room_id, string msg){
     }
 };
 
+void Serv::send_to_room_members(int room_id, char* msg, int len){
+    for(int i = 0; i < Player::max_players; i++){
+        if(Player::players[i].room == room_id)
+            send_to_player(i, msg, len);
+    }
+};
+
 void Serv::send_to_lobby_members(string msg){
     
     for(int i = 0; i < Player::max_players; i++){
@@ -380,9 +413,21 @@ void Serv::send_to_lobby_members(string msg){
 
 };
 
+void Serv::send_to_lobby_members(char* msg, int len){
+    
+    for(int i = 0; i < Player::max_players; i++){
+        if(Player::players[i].room == -1 && Player::players[i].fd != -1)
+            send_to_player(i, msg, len);
+    }
 
+};
 
 void Serv::send_to_player(int player_id, string msg){
     lock_guard<std::mutex> lock(Player::players[player_id].mtx); // PLAYER MUTEX 
     send(pfds[player_id].fd, msg.c_str(), msg.size(), 0);
+}
+
+void Serv::send_to_player(int player_id, char* msg, int len){
+    lock_guard<std::mutex> lock(Player::players[player_id].mtx); // PLAYER MUTEX 
+    send(pfds[player_id].fd, msg, len, 0);
 }

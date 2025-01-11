@@ -36,7 +36,7 @@ public:
     int get_player_count();
     string get_room_info_human();
 
-    string get_room_info();
+    vector<char> get_room_info();
 
     string join_room(int id);
 
@@ -46,6 +46,9 @@ public:
     bool start_game();
 
     static string get_general_room_info();
+
+    static vector<char> get_binary_general_room_info();
+
 
     void monitor();
 

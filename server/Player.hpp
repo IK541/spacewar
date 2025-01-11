@@ -6,6 +6,7 @@
 #include <netinet/in.h>
 #include <string>
 #include <mutex>
+#include <queue>
 
 using namespace std;
 
@@ -19,6 +20,7 @@ public:
     int fd;
     bool free;
     std::mutex mtx; // for msg
+    std::queue<char> data;
 
 
     static const int max_players = 20;
@@ -32,7 +34,7 @@ public:
 
     void make_free();
 
-    string set_nick(string);
+    bool set_nick(string);
 
     
     string change_ready_state();
