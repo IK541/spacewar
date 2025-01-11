@@ -3,11 +3,8 @@
 #include <sys/socket.h>
 #include <cstdio>
 #include "game_manager.hpp"
+#include "game_engine.hpp"
 
-#ifndef Gamespace_NAMESPACE_H
-#define Gamespace_NAMESPACE_H
-
-namespace Gamespace {
 
 
 #pragma pack(push, 1)
@@ -149,5 +146,3 @@ GameManager::~GameManager() {
 
     delete this->players;
 }
-}
-#endif // Gamespace_NAMESPACE_H

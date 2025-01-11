@@ -5,6 +5,12 @@
 
 #include "../common.hpp"
 
+#ifndef Gamespace_NAMESPACE_H
+#define Gamespace_NAMESPACE_H
+
+namespace Gamespace {
+
+
 #define SPAWN_RADIUS 0.5
 
 #define SHIP_SPEED 5.0
@@ -155,3 +161,5 @@ class GameEngine {
 };
 
 #define OUTPUT_HEAD_SIZE 18
+}
+#endif // Gamespace_NAMESPACE_H

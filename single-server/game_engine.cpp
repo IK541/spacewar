@@ -4,6 +4,8 @@
 #include <ctime>
 
 
+namespace Gamespace {
+
 Player::Player(int player_id, Ship* ship):id(player_id),ship(ship),
 ammo(MAX_AMMO),reload(0),rearm(0),respawn(RESPAWN_TIME),current_bullet(0),
 last_input(GameIn{0,(float)(ship->id<RED_TEAM_BEGIN?M_PI_2:-M_PI_2),false,false}){
@@ -353,3 +355,5 @@ Player* GameEngine::get_player(int player_id) {
             return this->red.players+i;
     return NULL;
 }
+
+} // namespace Gamespace
