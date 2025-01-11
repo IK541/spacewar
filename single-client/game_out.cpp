@@ -1,4 +1,4 @@
-#include "out.hpp"
+#include "game_out.hpp"
 
 #include <cstring>
 
@@ -11,27 +11,21 @@ UserInput InputCollector::collect() {
     };
 }
 
-InputTranslator::InputTranslator(GameStateI* game_state, sf::Window* window) {
-    this->game_state = game_state;
+InputTranslator::InputTranslator(sf::Window* window) {
     this->window = window;
     this->timer = 0;
 }
 
 void InputTranslator::reset_timer() { this->timer = 0; }
 
-SendData InputTranslator::translate(UserInput input) {
-    SendData result;
-    if (this->game_state->is_game_running()) {
-        result.udp = true;
-        sf::Vector2f mouse_position = sf::Vector2f(input.pos) - 0.5f * sf::Vector2f(this->window->getSize());
-        result.data = new GameIn {
-            this->timer++,
-            atan2f(-mouse_position.y, mouse_position.x),
-            input.lmb,
-            input.rmb
-        };
-    } // TODO: tcp
-    return result;
+GameIn InputTranslator::translate(UserInput input) {
+    sf::Vector2f mouse_position = sf::Vector2f(input.pos) - 0.5f * sf::Vector2f(this->window->getSize());
+    return GameIn {
+        this->timer++,
+        atan2f(-mouse_position.y, mouse_position.x),
+        input.lmb,
+        input.rmb
+    };
 }
 
 uint8_t* UdpOutputTranslator(GameIn data) {

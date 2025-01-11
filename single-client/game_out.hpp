@@ -12,20 +12,6 @@ struct UserInput {
     bool rmb;
 };
 
-struct TcpSendData {};
-
-struct SendData {
-    bool udp;
-    void* data;
-};
-
-// mocks
-
-class MockGameState : public GameStateI {
-    public:
-    bool is_game_running() { return true; }
-};
-
 // objects
 
 class InputCollector {
@@ -38,14 +24,13 @@ class InputCollector {
 
 class InputTranslator {
     private:
-    GameStateI* game_state;
     sf::Window* window;
     uint32_t timer;
     public:
-    InputTranslator(GameStateI* game_state, sf::Window* window);
+    InputTranslator(sf::Window* window);
     void reset_timer();
     // NEW
-    SendData translate(UserInput input);
+    GameIn translate(UserInput input);
 };
 
 // NEW

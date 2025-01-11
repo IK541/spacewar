@@ -18,6 +18,8 @@
 #define BASE_DIST (INNER_RADIUS+BASE_ZONE_RADIUS)
 #define SIGHT_LIMIT 8
 
+#define ROOM_COUNT 3
+
 #define PLAYERS_PER_TEAM 3
 #define BULLETS_PER_PLAYER 5
 #define ASTEROID_COUNT 45
@@ -106,6 +108,3 @@ inline bool get_side(uint16_t id) {
 }
 
 template <typename T> int sgn(T val) { return (T(0) < val) - (val < T(0)); }
-
-// client
-class GameStateI{public: virtual bool is_game_running()=0;};

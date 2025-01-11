@@ -5,6 +5,7 @@
 #include <vector>
 #include <mutex>
 
+#include "common.hpp"
 #include "../common.hpp"
 
 #define HP_BAR_WIDTH 0.1
@@ -12,30 +13,7 @@
 #define RESPAWN_RADIUS 1
 #define RESPAWN_WIDTH 0.2
 
-class Shape {
-    public:
-    sf::Vector2f pos;
-    float scale;
-    sf::Color color;
-    Shape(sf::Vector2f pos, float scale, sf::Color color);
-    virtual ~Shape(){}
-    virtual void draw(sf::RenderWindow* window) = 0;
-};
-
-class Circle : public Shape {
-    public:
-    Circle(sf::Vector2f pos, float scale, sf::Color color);
-    void draw(sf::RenderWindow* window);
-};
-
-class Triangle : public Shape {
-    public:
-    float angle;
-    Triangle(sf::Vector2f pos, float scale, sf::Color color, float angle);
-    void draw(sf::RenderWindow* window);
-};
-
-struct DrawData {
+struct DrawGameData {
     std::vector<SpaceObject*>* objects;
     uint16_t blue;
     uint16_t red;
@@ -44,8 +22,7 @@ struct DrawData {
 };
 class DrawDataI {
     public:
-    // virtual void get_space_objects(std::vector<SpaceObject*>* objects) = 0;
-    virtual DrawData get_game_state() = 0;
+    virtual DrawGameData get_game_state() = 0;
 };
 struct WindowData {
     sf::RenderWindow* window;
@@ -53,7 +30,7 @@ struct WindowData {
     sf::Vector2f center;
 };
 
-class Drawer {
+class GameDrawer {
     public:
     std::vector<Shape*> shapes;
     uint16_t blue;
@@ -65,7 +42,7 @@ class Drawer {
     // DELETE
     void clear();
     void draw(WindowData window);
-    ~Drawer();
+    ~GameDrawer();
     private:
     // NEW
     void add(SpaceObject* object);
@@ -77,7 +54,7 @@ class Drawer {
     void draw_respawn(WindowData window);
 };
 
-class GameState : public GameStateI, public DrawDataI {
+class GameState : public DrawDataI {
     private:
     uint32_t timestamp;
     uint16_t blue_hp;
@@ -92,9 +69,8 @@ class GameState : public GameStateI, public DrawDataI {
     GameState();
     void set_game_state(GameOut game_out);
     // NEW
-    DrawData get_game_state();
+    DrawGameData get_game_state();
     sf::Vector2f get_center();
-    bool is_game_running();
     private:
     // NEW
     void get_space_objects(std::vector<SpaceObject*>* objects);
