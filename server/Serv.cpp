@@ -12,7 +12,6 @@
 
 #include <queue>
 #include <string>
-#define BUFFER_SIZE 256
 
 
 #define MAX_EVENTS 8
@@ -151,12 +150,105 @@ void Serv::handle_client_input(int client_id) {
         return;
     }
 
-    unsigned int bytes_expected = 0;
 
-    buffer[bytes_read] = '\0'; // Null-terminate the message
+     // buffer[bytes_read] = '\0'; // Null-terminate the message
     std::cout << "Received from client " << client_id << ": " << buffer << "\n";
 
-    // Check if there's a message
+    char opcode = '-';
+    unsigned int bytes_expected = 0;
+    for(int i = 0; i < bytes_read; ++i) Player::players[client_id].data.push(buffer[i]);        
+    while(Player::players[client_id].data.size()) {
+        if(opcode == '-' && Player::players[client_id].data.size()) {
+            opcode = Player::players[client_id].data.front();
+            Player::players[client_id].data.pop();
+        }
+        if(opcode == 'A') {
+            if(Player::players[client_id].data.size()) {
+                bytes_expected = (int) Player::players[client_id].data.front();
+                Player::players[client_id].data.pop();
+                opcode = '>';
+            } else break;
+        }
+        if(opcode == 'E') {
+            {
+                lock_guard<std::mutex> lock(mtx);
+                std::cout << "Client " << client_id << " sent a 'E'-type message: switch team.\n";
+                
+                msg = Room::rooms[Player::players[client_id].room].switch_teams(client_id);
+                
+                if(msg[0] == 'Y')
+                        events.push("0" + std::to_string(Player::players[client_id].room));
+
+                send_to_player(client_id, msg);
+                cv.notify_one();
+            }
+            opcode = '-';
+        }
+        if(opcode == 'F') {
+            {
+            lock_guard<std::mutex> lock(mtx);
+            std::cout << "Client " << client_id << " sent a 'F'-type message: change ready state.\n";
+
+            msg = Player::players[client_id].change_ready_state();
+            if(msg[0] == 'Y')
+                    events.push("1" + std::to_string(Player::players[client_id].room));// FAILS HERE
+            else
+                send_to_player(client_id, "N");
+            cv.notify_one();
+            }
+            opcode = '-';
+        }
+        if(opcode == 'D') {
+            if(Player::players[client_id].data.size()) {
+                int room = (int) Player::players[client_id].data.front();
+                Player::players[client_id].data.pop();
+                {
+                lock_guard<std::mutex> lock(mtx);
+                std::cout << "Client " << client_id << " sent a 'D'-type message: enter room.\n";
+                    msg = Room::rooms[room].join_room(client_id);
+                    if(msg[0] == 'Y') events.push("0" + std::to_string(room));
+
+                send_to_player(client_id, msg);
+                cv.notify_one();
+                }
+                opcode = '-';
+            } else break;
+        }
+        if(opcode == '>') {
+            if (Player::players[client_id].data.size() >= bytes_expected) {
+                std::string name;
+                for(unsigned int i = 0; i < bytes_expected; ++i) {
+                    name.push_back(Player::players[client_id].data.front());
+                    Player::players[client_id].data.pop();
+                }
+                
+                {
+                std::cout << "Client " << client_id << " sent an 'A'-type message: nick.\n";
+                // receive nick from player
+                lock_guard<std::mutex> lock(mtx);
+
+                if(Player::players[client_id].set_nick(name)){
+                    vector<char> binary_lobby = Room::get_binary_general_room_info();
+                    char bf[13];
+                    for (int i = 0; i <= 13; i++)
+                        bf[i] = binary_lobby[i];
+
+                    send_to_player(client_id, bf, 13);
+                }
+                else
+                    send_to_player(client_id, "N");
+                
+                }
+
+                bytes_expected = 0;
+                opcode = '-';
+            } else break;
+        }
+    }
+}
+
+
+    /*
     if (bytes_read > 0) {
         char first_char = buffer[0]; // First letter of the message
         int room_char;
@@ -290,7 +382,7 @@ void Serv::handle_client_input(int client_id) {
                 break;
         }
     }
-}
+    */
 
 void Serv::disconnect_client(int client_id) {
     lock_guard<std::mutex> lock(mtx);
