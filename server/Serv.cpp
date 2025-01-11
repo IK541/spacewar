@@ -292,8 +292,9 @@ void Serv::cleanup(){
     close(server_fd);
 
     for(int i = Player::max_players; i >= 0; i--){
+        if (pfds[i].fd == -1) continue;
         shutdown(pfds[i].fd, SHUT_RDWR);
-        close(Player::players[i].fd);
+        close(pfds[i].fd);
     }
 
     for(int i = 0; i < Player::max_players; i++){
