@@ -26,6 +26,19 @@ std::mutex Room::rooms_mutex;
 int Room::free_room_id = 0;
 Room Room::rooms[Room::max_rooms];
 Player Player::players[Player::max_players];
+Serv server(PORT);
+
+
+void cleanup(){
+    delete mtx;
+    server.cleanup();
+}
+
+void signalHandler(int signum) {
+    std::cout << "\nInterrupt signal (" << signum << ") received. Gracefully exiting...\n";
+    cleanup();
+    exit(signum);
+}
 
 void logic(int room_id){
     printf("room %i is rooming", room_id);
@@ -80,7 +93,7 @@ int main(){
 
 
 
-  
+    signal(SIGINT, signalHandler); // Handle Ctrl+C (SIGINT)
 
     std::thread serveR(serveRooms);
     sleep(1);

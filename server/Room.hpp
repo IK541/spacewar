@@ -9,7 +9,7 @@ using namespace std;
 
 class Room {
 public:
-    static const int max_players = 10; // debug instead opf 6
+    static const int max_players = 6; 
     static const int max_rooms = 3;
     static int free_room_id; // only to generate rooms
     static Room rooms[ max_rooms ];

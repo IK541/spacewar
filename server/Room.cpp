@@ -77,7 +77,7 @@ string Room::get_room_info(){
     }
 
     if (!no_of_players){
-        info+="None \n";
+        info+="None\n";
     }
 
     return info;

@@ -29,8 +29,10 @@ public:
 
     void make_free();
 
-    void set_nick(char buffer[1024]);
+    string set_nick(string);
 
+    
+    string change_ready_state();
 
     string get_player_info();
 

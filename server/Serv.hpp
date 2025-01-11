@@ -19,6 +19,8 @@ class Serv {
 
     public:
 
+    pollfd pfds[Player::max_players + 1]{};
+    bool free_pfds[Player::max_players]{};
     static std::mutex serv_mutex;
 
 
@@ -29,12 +31,13 @@ class Serv {
 
     void serve(std::mutex *mtx);
 
-    void handle_new_connection(pollfd pfds[], bool free_pfds[], int server_fd);
+    void handle_new_connection();
 
-    void handle_client_input(int client_id, pollfd *pfds, bool *free_pfds);
+    void handle_client_input(int client_id);
 
-    void disconnect_client(int client_id, pollfd *pfds, bool *free_pfds);
+    void disconnect_client(int client_id);
 
-    void handle_client_output(int client_id, pollfd *pfds, bool *free_pfds);
+    void handle_client_output(int client_id);
 
+    void cleanup();
 };
