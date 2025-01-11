@@ -119,7 +119,7 @@ int GameManager::run_game(std::vector<GameManagerInput> players) {
         if(result != NO_WIN) return result;
         uint64_t end = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         uint32_t to_sleep = (uint32_t)(end - start > 1000000UL/FPS ? 0 : 1000000UL/FPS - end + start);
-        std::usleep(to_sleep);
+        usleep(to_sleep);
     }
 }
 
