@@ -1,9 +1,7 @@
 #include <cmath>
-#include <mutex>
-#include <thread>
 #include <unistd.h>
 #include <sys/socket.h>
-#include "room_manager.hpp"
+#include "game_manager.hpp"
 
 #pragma pack(push, 1)
 struct CompressedMovable {
@@ -101,6 +99,7 @@ int GameManager::run_game(std::vector<GameManagerInput> players) {
         game_engine.set_ship(player.ship_id);
 
     while(true) {
+        uint64_t start = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
         for(GameManagerInput player: players) {
             sockaddr_in addr = player.addr;
             uint8_t ship_id = player.ship_id;
@@ -114,7 +113,9 @@ int GameManager::run_game(std::vector<GameManagerInput> players) {
         }
         int result = game_engine.update_physics(1.0/FPS);
         if(result != NO_WIN) return result;
-        usleep(1000000/FPS); // TODO: better timer
+        uint64_t end = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        uint32_t to_sleep = (uint32_t)(end - start > 1000000UL/FPS ? 0 : 1000000UL/FPS - end + start);
+        usleep(to_sleep);
     }
 }
 

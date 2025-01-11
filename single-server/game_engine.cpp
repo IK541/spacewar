@@ -294,8 +294,8 @@ int GameEngine::update_physics(double dt) {
 }
 
 int GameEngine::get_winner() {
-    return !this->blue.base.hp ? BLUE_WIN :
-        !this->red.base.hp ? RED_WIN :
+    return !this->red.base.hp ? BLUE_WIN :
+        !this->blue.base.hp ? RED_WIN :
         !this->timestamp ? DRAW : NO_WIN;
 }
 
