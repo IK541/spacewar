@@ -50,15 +50,13 @@ Serv::Serv(int _port){
         std::cout << "server created and binded successfully\n";
 }
 
-void Serv::serve(mutex *mtx){
+void Serv::serve(){
     // Start listening
     if (listen(server_fd, 10) < 0) {
         perror("Listen failed");
         exit(-1);
     }
 
-    pfds[MAX_CLIENTS].fd = server_fd;
-    pfds[MAX_CLIENTS].events = POLLIN;
 
     std::cout << "Server is listening on port " << port << "...\n";
     while (true) {
@@ -102,69 +100,6 @@ void Serv::serve(mutex *mtx){
     return;
 }
 
-void Serv::serve(Player players[], Room rooms[], mutex *mtx){
-
-    // Start listening
-    if (listen(this->server_fd, 10) < 0) {
-        perror("Listen failed");
-        exit(-1);
-    }
-
-
-
-
-    std::cout << "Server is listening on port " << port << "...\n";
-    while (true) {
-        int num_events = poll(pfds, MAX_CLIENTS + 1, -1);
-        if (num_events < 0) {
-            perror("Poll failed");
-            break;
-        }
-
-        // Check if there's a new connection
-        if (pfds[MAX_CLIENTS].revents & POLLIN) {
-            handle_new_connection();
-            --num_events; // One event handled
-        }
-
-        // Handle events for existing clients
-        for (int i = 0; i < MAX_CLIENTS && num_events > 0; ++i) {
-            if (pfds[i].fd == -1) continue; // Skip unused slots
-
-            // Check if there's data to read
-            if (pfds[i].revents & POLLIN) {
-                handle_client_input(i);
-                --num_events;
-            }
-
-            // Check if ready to write (optional, if implementing non-blocking send)
-            if (pfds[i].revents & POLLOUT) {
-                handle_client_output(i);
-                --num_events;
-            }
-
-            // Check for error conditions
-            if (pfds[i].revents & (POLLERR | POLLHUP | POLLNVAL)) {
-                disconnect_client(i);
-                --num_events;
-            }
-        }
-
-
-        // client handler
-            
-
-
-            for(int cid = 0; cid < MAX_CLIENTS; ++cid) {
-                if(free_pfds[cid] || !(pfds[cid].revents & POLL_IN)) continue;
-                
-            }
-        }
-
-        close(server_fd);
-        return;
-
-    }
 
 void Serv::handle_new_connection() {
     sockaddr_in player_address;
@@ -176,7 +111,6 @@ void Serv::handle_new_connection() {
     }
 
     // Find a free slot
-    serv_mutex.lock();
     for (int i = 0; i < MAX_CLIENTS; ++i) {
         if (!free_pfds[i]) {
             free_pfds[i] = true;
@@ -185,14 +119,12 @@ void Serv::handle_new_connection() {
             std::cout << "Client connected on slot " << i << "\n";
 
             Player::players[i].take(player_address, client_fd);
-            serv_mutex.unlock();
             return;
         }
     }
 
     // Server full
     std::string msg = "Server is full, try again later\n";
-    serv_mutex.unlock();
     cout << "denied client, too much users\n";
     send(client_fd, msg.c_str(), msg.size(), 0);
     shutdown(client_fd, SHUT_RDWR);
@@ -226,13 +158,18 @@ void Serv::handle_client_input(int client_id) {
         switch (first_char) {
             case 'A':
             case 'a':
+                {
+                    lock_guard<std::mutex> lock(mtx);
+                
                 nick = string(buffer).substr(2, bytes_read);
                 std::cout << "Client " << client_id << " sent an 'A'-type message: nick.\n";
                 // receive nick from player
                 msg = Player::players[client_id].set_nick(nick);
 
                 send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
+                }
                 break;
+                
 
             case 'B':
             case 'b':
@@ -262,33 +199,54 @@ void Serv::handle_client_input(int client_id) {
 
             case 'D': // enter room n
             case 'd':
+                {
+                lock_guard<std::mutex> lock(mtx);
                 std::cout << "Client " << client_id << " sent a 'D'-type message: enter room.\n";
                 if (buffer[2] < '0' && buffer[2] >'3') msg = "N\n";
                 else{
                     room_char = buffer[2] - '0';
-                    msg = Room::rooms[room_char].join_room(client_id);
-                }
 
+
+                    msg = Room::rooms[room_char].join_room(client_id);
+                    if(msg[0] == 'Y')
+                        events.push("0" + std::to_string(room_char));
+
+                }
                 send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
+                cv.notify_one();
+                }
                 break;
+                
 
             case 'E':
             case 'e': // switch teams
+                {
+                lock_guard<std::mutex> lock(mtx);
                 std::cout << "Client " << client_id << " sent a 'E'-type message: switch team.\n";
                 
                 msg = Room::rooms[Player::players[client_id].room].switch_teams(client_id);
                 
+                if(msg[0] == 'Y')
+                        events.push("0" + std::to_string(Player::players[client_id].room));
 
                 send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
+                cv.notify_one();
+                }
                 break;
 
             case 'F':
             case 'f':
+                {
+                lock_guard<std::mutex> lock(mtx);
                 std::cout << "Client " << client_id << " sent a 'F'-type message: change ready state.\n";
 
                 msg = Player::players[client_id].change_ready_state();
+                if(msg[0] == 'Y')
+                        events.push("1" + std::to_string(Player::players[client_id].room));
 
                 send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
+                cv.notify_one();
+                }
                 break;
 
             default:
@@ -300,6 +258,10 @@ void Serv::handle_client_input(int client_id) {
 }
 
 void Serv::disconnect_client(int client_id) {
+    lock_guard<std::mutex> lock(mtx);
+    events.push("0" + std::to_string(Player::players[client_id].room));
+    cv.notify_one();
+
     close(pfds[client_id].fd);
     pfds[client_id].fd = -1;
     pfds[client_id].events = 0;
@@ -338,7 +300,47 @@ void Serv::cleanup(){
             close(Player::players[i].fd);
             }
         }
-
-
-    
 }
+
+
+
+void Serv::monitor(){
+    while (true) {
+        unique_lock<mutex> lock(mtx);
+        cv.wait(lock, [this] { return !events.empty() || stop; });
+
+        while (!events.empty()) {
+            // events type:= 0:join 1:sw team 2:ready 3:dc 4:start 
+            string event = events.front();
+            cout << "detecten event: " << event << endl;
+            if(event[0] == '0')
+                send_to_room_members(stoi(event.substr(1)));
+            send_to_lobby_members();
+
+            events.pop();
+        }
+
+        if (stop && events.empty()) {
+            break;
+        }
+    }
+
+}
+
+
+void Serv::send_to_room_members(int room_id){
+    string msg = Room::rooms[room_id].get_room_info();
+    for(int i = 0; i < Player::max_players; i++){
+        if(Player::players[i].room == room_id)
+            send(pfds[i].fd, msg.c_str(), msg.size(), 0);
+    }
+};
+
+void Serv::send_to_lobby_members(){
+    string msg = Room::get_general_room_info();
+    for(int i = 0; i < Player::max_players; i++){
+        if(Player::players[i].room == -1 && Player::players[i].fd != -1)
+            send(pfds[i].fd, msg.c_str(), msg.size(), 0);
+    }
+
+};

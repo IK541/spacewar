@@ -5,6 +5,11 @@
 #include <mutex>
 #include <poll.h>
 
+#include <condition_variable>
+#include <queue>
+#include <string>
+#include <chrono>
+
 
 #include "Room.hpp"
 
@@ -21,15 +26,19 @@ class Serv {
 
     pollfd pfds[Player::max_players + 1]{};
     bool free_pfds[Player::max_players]{};
-    static std::mutex serv_mutex;
+    std::mutex mtx;
+    std::condition_variable cv;
+    std::queue<std::string> events;
+    bool stop = false;
+
+    static Serv serv;
 
 
     Serv(int _port);
 
 
-    void serve(Player players[], Room rooms[], std::mutex *mtx);
 
-    void serve(std::mutex *mtx);
+    void serve();
 
     void handle_new_connection();
 
@@ -38,6 +47,15 @@ class Serv {
     void disconnect_client(int client_id);
 
     void handle_client_output(int client_id);
+
+    void monitor();
+
+    void send_to_room_members(int room_id);
+
+    void send_to_lobby_members();
+
+
+    
 
     void cleanup();
 };

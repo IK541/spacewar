@@ -36,6 +36,8 @@ public:
 
     string get_player_info();
 
+    string get_binary_player_info();
+
 
     static int find_free_slot_serv(){
         

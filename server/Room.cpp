@@ -43,42 +43,44 @@ int Room::get_player_count() {
 }
 
 string Room::get_room_info(){
-    string info = to_string(id) + " room info: \n";
 
-    info += "ID: " + to_string(id) + "\n";
-    info += "PlayersNo: " + to_string(get_player_count()) + "\n";
-    info += "Ready: " + to_string(get_ready_players()) + "\n";
-    info += "Started: " + to_string(playing) + "\n";
+//[0] msg type
+//[1] 0 -> room
+//[2] 0 -> Started
+//[3] team 0 how many players
+//[4] team 1 how many players
+//[5] is 1st player ready
+//[6-7] len of 1st player 
+//[8] 1st player nick 
+// [..]
+//[9] is 1st player ready
+//[10] len of 1st player
+//[11] 1st player nick
 
-    int no_of_players = 0;
-    info += "Team 0: \n";
+
+
+
+
+
+    string info = "C"; // 0
+    info += to_string(id); // 1
+    info += to_string(playing); // 2
+    info += to_string(teams_player_number[0]); // 3
+    info += to_string(teams_player_number[1]); // 4
+
 
     
     for(int i = 0; i < Player::max_players; i++){
         if(Player::players[i].room == id && Player::players[i].team == 0)
-        {
-            info += Player::players[i].get_player_info();
-
-            no_of_players++;
-        }
-    }
-    if (!no_of_players){
-        info+="None \n";
+            info += Player::players[i].get_binary_player_info();
     }
 
-    no_of_players= 0;
-
-    info += "Team 1: \n";
-
-    
     for(int i = 0; i < Player::max_players; i++){
         if(Player::players[i].room == id && Player::players[i].team == 1)
-            info += Player::players[i].get_player_info();
+            info += Player::players[i].get_binary_player_info();
     }
 
-    if (!no_of_players){
-        info+="None\n";
-    }
+
 
     return info;
 }
@@ -100,13 +102,16 @@ string Room::get_general_room_info() {
 
     for(int i = 0; i < max_rooms; i++){
         info += "ID: " + to_string(rooms[i].id) + "\n";
-        info += "PlayersNo: " + to_string(rooms[i].get_player_count()) + "\n";
-        info += "Ready: " + to_string(rooms[i].get_ready_players()) + "\n";
+        // per team
+        info += "Team 0: " + to_string(rooms[i].teams_player_number[0]) + "\n";
+        info += "Team 1: " + to_string(rooms[i].teams_player_number[1]) + "\n";
+
+        // info += "PlayersNo: " + to_string(rooms[i].get_player_count()) + "\n";
+        // info += "Ready: " + to_string(rooms[i].get_ready_players()) + "\n";
         info += "Started: " + to_string(rooms[i].playing) + "\n";
     }
 
-    
-    
+
     return info;
 }
 

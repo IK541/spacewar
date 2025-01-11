@@ -5,6 +5,7 @@
 #include <sys/wait.h>
 
 
+
 #include "Room.hpp"
 #include "Serv.hpp"
 #include "Player.hpp"
@@ -18,20 +19,17 @@ using namespace std;
 
 // #define MAX_CLIENTS_PER_ROOM 8
 
-std::mutex *mtx = new mutex;
-std::mutex Serv::serv_mutex;
 std::mutex Room::rooms_mutex;
 
 
 int Room::free_room_id = 0;
 Room Room::rooms[Room::max_rooms];
 Player Player::players[Player::max_players];
-Serv server(PORT);
+Serv Serv::serv(PORT);
 
 
 void cleanup(){
-    delete mtx;
-    server.cleanup();
+    Serv::serv.cleanup();
 }
 
 void signalHandler(int signum) {
@@ -76,16 +74,17 @@ void serveRooms(){
 void handleClients(){
     cout << "preparing client handler \n";
 
-    Serv server(PORT);
 
-
-    // uruchamia po forku funkcję, która wobsługuje klienta. Przepisać na poll?
-    // cout << "test_begins\n";
-    // server.test();
-    server.serve(mtx);
+    Serv::serv.serve();
+    sleep(1);
 }
 
+void monitor_changes(){
 
+    Serv::serv.monitor();
+    sleep(1);
+
+}
 
 
 
@@ -99,10 +98,16 @@ int main(){
     sleep(1);
 
     std::thread serveC(handleClients);
+    sleep(1);
+
+    std::thread serveM(monitor_changes);
+    sleep(1);
+
     
     
     serveR.join();
     serveC.join();
+    serveM.join();
 
 
     return 0;

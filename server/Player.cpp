@@ -32,6 +32,19 @@ void Player::make_free(){
     free = true;
 }
 
+string Player::get_binary_player_info(){
+    string msg = to_string(ready);
+    if (nick.size() <= 9)
+        msg += "0" + to_string(nick.size());
+    else
+        msg += to_string(nick.size());
+
+    msg += nick;
+    return msg;
+}
+
+
+
 
 string Player::set_nick(string _nick){
 
