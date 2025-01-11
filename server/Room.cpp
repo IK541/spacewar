@@ -129,7 +129,8 @@ string Room::join_room(int _id){
     Player::players[_id].room = id;
     free_slots--;
 
-    if(teams_player_number[0] > teams_player_number[1] && teams_player_number[0] < 3){
+    if( teams_player_number[0] < 3 && teams_player_number[0] <= teams_player_number[1]){
+        printf("true\n");
         Player::players[_id].team = 0;
         teams_player_number[0]++;
     }
@@ -152,7 +153,7 @@ string Room::join_room(int _id){
 
 string Room::switch_teams(int _id){
 
-    if (Player::players[_id].room != -1){
+    if (Player::players[_id].room == -1){
         return "N\n not in room\n";
     }
 

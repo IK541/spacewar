@@ -253,7 +253,7 @@ void Serv::handle_client_input(int client_id, pollfd *pfds, bool *free_pfds) {
 
 
                 std::cout << "Client " << client_id << " sent a 'C'-type message: get specific room info.\n";
-                if (buffer[2] < '0' && buffer[2] >'3') msg = "Y\n";
+                if (buffer[2] < '0' && buffer[2] >'3') msg = "N\n";
                 else{
                     room_char = buffer[2] - '0';
                     msg += Room::rooms[room_char].get_room_info();
@@ -265,7 +265,7 @@ void Serv::handle_client_input(int client_id, pollfd *pfds, bool *free_pfds) {
             case 'D': // enter room n
             case 'd':
                 std::cout << "Client " << client_id << " sent a 'D'-type message: enter room.\n";
-                if (buffer[2] < '0' && buffer[2] >'3') msg = "Y\n";
+                if (buffer[2] < '0' && buffer[2] >'3') msg = "N\n";
                 else{
                     room_char = buffer[2] - '0';
                     msg = Room::rooms[room_char].join_room(client_id);

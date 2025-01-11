@@ -28,7 +28,6 @@ Room Room::rooms[Room::max_rooms];
 Player Player::players[Player::max_players];
 
 void logic(int room_id){
-    sleep(room_id * 2 + 1);
     printf("room %i is rooming", room_id);
 
     // mtx->lock();
