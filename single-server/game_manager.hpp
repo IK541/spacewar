@@ -10,6 +10,8 @@
 
 #define BUFFER_SIZE 4096
 
+namespace gamespace{
+
 // NEW
 uint8_t* UdpOutputTranslator(GameOut output);
 
@@ -48,3 +50,4 @@ class GameManager {
     GameManager(int room_id);
     ~GameManager();
 };
+} // namespace gamespace

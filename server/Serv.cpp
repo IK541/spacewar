@@ -151,6 +151,8 @@ void Serv::handle_client_input(int client_id) {
         return;
     }
 
+    unsigned int bytes_expected = 0;
+
     buffer[bytes_read] = '\0'; // Null-terminate the message
     std::cout << "Received from client " << client_id << ": " << buffer << "\n";
 
