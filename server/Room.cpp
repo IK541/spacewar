@@ -159,6 +159,34 @@ bool Room::start_game() {
         Player::players[i].ready = false;
     }
 
+    GameManager gm(id + 1);
+
+    vector<GameManagerInput> p;
+
+    int sh_id = BLUE_TEAM_BEGIN;
+
+    for(int i = 0; i < Player::max_players; i++){
+        if(Player::players[i].room == id && Player::players[i].team == 0){
+            GameManagerInput gmi;
+            gmi.ship_id = sh_id + i;
+            gmi.addr = Player::players[i].address;
+            p.push_back(gmi);
+        }
+    }
+    sh_id = RED_TEAM_BEGIN;
+    for(int i = 0; i < Player::max_players; i++){
+        if(Player::players[i].room == id && Player::players[i].team == 1){
+            GameManagerInput gmi;
+            gmi.ship_id = sh_id + i;
+            gmi.addr = Player::players[i].address;
+            p.push_back(gmi);
+        }
+    }
+
+    gm.run_game(p);
+
+
+
     Serv::serv.send_to_room_members(id, "G"+to_string(id)+"\n");
     // notify lobby members
     char msg_bin[13];
