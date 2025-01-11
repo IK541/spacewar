@@ -22,7 +22,6 @@ class Serv {
     int addrlen; // length of address
 
     public:
-
     static bool work;
 
     pollfd pfds[Player::max_players + 1]{};
@@ -51,9 +50,9 @@ class Serv {
 
     void monitor();
 
-    void send_to_room_members(int room_id);
+    void send_to_room_members(int room_id, string msg);
 
-    void send_to_lobby_members();
+    void send_to_lobby_members(string msg);
 
     void send_to_player(int player_id, string msg);
 

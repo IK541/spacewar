@@ -1,13 +1,18 @@
 #include "Player.hpp"
+#include "Room.hpp"
 
 Player::Player(){
-    free = true;
     address = {};
+    if(fd > 0) {
+        shutdown(fd, SHUT_RDWR);
+        close(fd);
+    }
     fd = -1;
     ready = false;
     team = 0;
-    nick = "free player";
+    // nick = ""; //"free player";
     room = -1;
+    free = true;
 }
 
 void Player::take(sockaddr_in _address, int _fd){
@@ -24,14 +29,10 @@ void Player::take(sockaddr_in _address, int _fd){
 
 void Player::make_free(){
     address = {};
-    if(fd > 0) {
-        shutdown(fd, SHUT_RDWR);
-        close(fd);
-    }
     fd = -1;
     ready = false;
     team = 0;
-    // nick = ""; //"free player";
+    nick = "free player";
     room = -1;
     free = true;
 }
@@ -74,5 +75,18 @@ string Player::change_ready_state(){
 
     if(ready) ready = 0;
     else ready = 1;
+    printf("ready state changed to %i\n", ready);
+
+    if (Room::rooms[room].get_player_count() == Room::rooms[room].get_ready_players()
+    &&  Room::rooms[room].teams_player_number[0] > 0
+    && Room::rooms[room].teams_player_number[1] > 0){
+                Room::rooms[room].events.push("0");
+                Room::rooms[room].cv.notify_one();
+
+    }
+
+
+
+
     return "Y\nState changed to " + to_string(ready) + "\n";
 }

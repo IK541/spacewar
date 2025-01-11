@@ -22,7 +22,7 @@ using namespace std;
 std::mutex Room::rooms_mutex;
 std::mutex Serv::mtx;
 bool Serv::work = true;
-
+bool Room::work = true;
 
 int Room::free_room_id = 0;
 Room Room::rooms[Room::max_rooms];
@@ -31,10 +31,13 @@ Serv Serv::serv(PORT);
 
 
 void cleanup(){
+    Serv::work = false;
+    Room::work = false;
     Serv::serv.cleanup();
 }
 
 void signalHandler(int signum) {
+
     std::cout << "\nInterrupt signal (" << signum << ") received. Gracefully exiting...\n";
     cleanup();
     exit(signum);
@@ -46,6 +49,8 @@ void logic(int room_id){
     // mtx->lock();
 
     printf("\n room id:%i ready \n", Room::rooms[room_id].get_id());
+
+    Room::rooms[room_id].monitor();
 
     // while(true){
     //     mtx->lock();

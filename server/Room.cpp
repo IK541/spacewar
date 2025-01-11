@@ -6,7 +6,9 @@
 #include <netinet/in.h>
 #include <string>
 #include "Player.hpp"
+#include "Serv.hpp"
 #include <mutex>
+#include <iostream>
 using namespace std;
 
 
@@ -85,13 +87,52 @@ string Room::get_room_info(){
     return info;
 }
 
+string Room::get_room_info_human(){
+    string info = to_string(id) + " room info: \n";
 
+    info += "ID: " + to_string(id) + "\n";
+    info += "PlayersNo: " + to_string(get_player_count()) + "\n";
+    info += "Ready: " + to_string(get_ready_players()) + "\n";
+    info += "Started: " + to_string(playing) + "\n";
+
+    int no_of_players = 0;
+    info += "Team 0: \n";
+
+    
+    for(int i = 0; i < Player::max_players; i++){
+        if(Player::players[i].room == id && Player::players[i].team == 0)
+        {
+            info += Player::players[i].get_player_info();
+
+            no_of_players++;
+        }
+    }
+    if (!no_of_players){
+        info+="None \n";
+    }
+
+    no_of_players= 0;
+
+    info += "Team 1: \n";
+
+    
+    for(int i = 0; i < Player::max_players; i++){
+        if(Player::players[i].room == id && Player::players[i].team == 1)
+            info += Player::players[i].get_player_info();
+    }
+
+    if (!no_of_players){
+        info+="None\n";
+    }
+
+    return info;}
 
 bool Room::start_game() {
     playing = true;
-    printf("Game has started\n");
+    printf("Game has started in room %i\n", id);
+    Serv::serv.send_to_room_members(id, "G"+to_string(id)+"\n");
     sleep(5);
-    printf("Game has ended\n");
+    printf("Game has ended in room %i\n", id);
     playing = false;
     return true;
 }
@@ -158,6 +199,9 @@ string Room::join_room(int _id){
 
 string Room::switch_teams(int _id){
 
+
+    
+
     if (Player::players[_id].room == -1){
         return "N\n not in room\n";
     }
@@ -194,4 +238,26 @@ string Room::switch_teams(int _id){
 
     rooms_mutex.unlock();
     return "Y\n";
+}
+
+
+void Room::monitor(){
+    std::cout << "monitoring room " << id << std::endl;
+    while (true) {
+        unique_lock<mutex> lock(game_mtx);
+        cv.wait(lock, [this] { return !events.empty() || stop; });
+
+        while (!events.empty()) {
+            string event = events.front();
+            std::cout << "detecten event: " << event << endl;
+            if(event[0] == '0')
+                start_game();
+
+            events.pop();
+        }
+
+        if (stop && events.empty()) {
+            break;
+        }
+    }
 }

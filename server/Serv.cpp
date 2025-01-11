@@ -198,6 +198,22 @@ void Serv::handle_client_input(int client_id) {
                 send_to_player(client_id, msg);
                 cv.notify_one();
                 break;
+            // human like
+            case 'Z': // Send room details
+            case 'z':
+                
+
+
+                std::cout << "Client " << client_id << " sent a 'Z'-type message: get specific room info.\n";
+                if (buffer[2] < '0' && buffer[2] >'3') msg = "N\n";
+                else{
+                    room_char = buffer[2] - '0';
+                    msg += Room::rooms[room_char].get_room_info_human();
+
+                }
+                send_to_player(client_id, msg);
+                cv.notify_one();
+                break;
 
             case 'D': // enter room n
             case 'd':
@@ -244,7 +260,7 @@ void Serv::handle_client_input(int client_id) {
 
                 msg = Player::players[client_id].change_ready_state();
                 if(msg[0] == 'Y')
-                        events.push("1" + std::to_string(Player::players[client_id].room));
+                        events.push("1" + std::to_string(Player::players[client_id].room));// FAILS HERE
 
                 send_to_player(client_id, msg);
                 cv.notify_one();
@@ -261,7 +277,7 @@ void Serv::handle_client_input(int client_id) {
 
 void Serv::disconnect_client(int client_id) {
     lock_guard<std::mutex> lock(mtx);
-    events.push("0" + std::to_string(Player::players[client_id].room)); // FAILS HERE
+    events.push("0" + std::to_string(Player::players[client_id].room));
     cv.notify_one();
 
     if(pfds[client_id].fd > 0)
@@ -289,35 +305,31 @@ void Serv::handle_client_output(int client_id) {
 
 void Serv::cleanup(){
 
-    Serv::work = false;
-
     lock_guard<std::mutex> server_lock(Serv::mtx);
     lock_guard<std::mutex> room_lock(Room::rooms_mutex);
     for(int i = 0; i < Player::max_players; ++i)
         Player::players[i].mtx.lock();
-
     shutdown(server_fd, SHUT_RDWR);
     close(server_fd);
 
     for(int i = Player::max_players; i >= 0; i--) {
         Player::players[i].make_free();
     }
-
     for(int i = Player::max_players; i >= 0; i--){
         if (pfds[i].fd == -1) continue;
         shutdown(pfds[i].fd, SHUT_RDWR);
         close(pfds[i].fd);
     }
 
-    // for(int i = 0; i < Player::max_players; i++){
+        // for(int i = 0; i < Player::max_players; i++){
     //     if(Player::players[i].fd != -1) {        
     //         shutdown(Player::players[i].fd, SHUT_RDWR);
     //         close(Player::players[i].fd);
     //     }
     // }
-
     for(int i = 0; i < Player::max_players; ++i)
         Player::players[i].mtx.unlock();
+
 }
 
 
@@ -328,12 +340,18 @@ void Serv::monitor(){
         cv.wait(lock, [this] { return !events.empty() || stop; });
 
         while (!events.empty()) {
-            // events type:= 0:join 1:sw team 2:ready 3:dc 4:start 
+            string msg = "";
+                        // events type:= 0:join 1:sw team 2:ready 3:dc 4:start 
             string event = events.front();
             cout << "detecten event: " << event << endl;
-            if(event[0] == '0')
-                send_to_room_members(stoi(event.substr(1)));
-            send_to_lobby_members();
+            if(event[0] == '0'){
+                msg = Room::rooms[stoi(event.substr(1))].get_room_info();
+                send_to_room_members(stoi(event.substr(1)), msg);
+
+            }
+
+            msg = Room::get_general_room_info();
+            send_to_lobby_members(msg);
 
             events.pop();
         }
@@ -346,16 +364,15 @@ void Serv::monitor(){
 }
 
 
-void Serv::send_to_room_members(int room_id){
-    string msg = Room::rooms[room_id].get_room_info();
+void Serv::send_to_room_members(int room_id, string msg){
     for(int i = 0; i < Player::max_players; i++){
         if(Player::players[i].room == room_id)
             send_to_player(i, msg);
     }
 };
 
-void Serv::send_to_lobby_members(){
-    string msg = Room::get_general_room_info();
+void Serv::send_to_lobby_members(string msg){
+    
     for(int i = 0; i < Player::max_players; i++){
         if(Player::players[i].room == -1 && Player::players[i].fd != -1)
             send_to_player(i, msg);
@@ -366,6 +383,6 @@ void Serv::send_to_lobby_members(){
 
 
 void Serv::send_to_player(int player_id, string msg){
-    lock_guard<std::mutex> lock(Player::players[player_id].mtx); // PLAYER MUTEX
+    lock_guard<std::mutex> lock(Player::players[player_id].mtx); // PLAYER MUTEX 
     send(pfds[player_id].fd, msg.c_str(), msg.size(), 0);
 }
