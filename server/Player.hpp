@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string>
+#include <mutex>
 
 using namespace std;
 
@@ -17,6 +18,8 @@ public:
     sockaddr_in address;
     int fd;
     bool free;
+    std::mutex mtx; // for msg
+
 
     static const int max_players = 20;
     static Player players[max_players];

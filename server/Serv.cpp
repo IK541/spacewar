@@ -166,7 +166,7 @@ void Serv::handle_client_input(int client_id) {
                 // receive nick from player
                 msg = Player::players[client_id].set_nick(nick);
 
-                send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
+                send_to_player(client_id, msg);
                 }
                 break;
                 
@@ -179,7 +179,8 @@ void Serv::handle_client_input(int client_id) {
                 
                 msg += Room::get_general_room_info();
                 
-                send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
+                send_to_player(client_id, msg);
+                cv.notify_one();
                 break;
 
             case 'C': // Send room details
@@ -194,7 +195,8 @@ void Serv::handle_client_input(int client_id) {
                     msg += Room::rooms[room_char].get_room_info();
 
                 }
-                send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
+                send_to_player(client_id, msg);
+                cv.notify_one();
                 break;
 
             case 'D': // enter room n
@@ -212,7 +214,7 @@ void Serv::handle_client_input(int client_id) {
                         events.push("0" + std::to_string(room_char));
 
                 }
-                send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
+                send_to_player(client_id, msg);
                 cv.notify_one();
                 }
                 break;
@@ -229,7 +231,7 @@ void Serv::handle_client_input(int client_id) {
                 if(msg[0] == 'Y')
                         events.push("0" + std::to_string(Player::players[client_id].room));
 
-                send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
+                send_to_player(client_id, msg);
                 cv.notify_one();
                 }
                 break;
@@ -244,7 +246,7 @@ void Serv::handle_client_input(int client_id) {
                 if(msg[0] == 'Y')
                         events.push("1" + std::to_string(Player::players[client_id].room));
 
-                send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
+                send_to_player(client_id, msg);
                 cv.notify_one();
                 }
                 break;
@@ -332,7 +334,7 @@ void Serv::send_to_room_members(int room_id){
     string msg = Room::rooms[room_id].get_room_info();
     for(int i = 0; i < Player::max_players; i++){
         if(Player::players[i].room == room_id)
-            send(pfds[i].fd, msg.c_str(), msg.size(), 0);
+            send_to_player(i, msg);
     }
 };
 
@@ -340,7 +342,14 @@ void Serv::send_to_lobby_members(){
     string msg = Room::get_general_room_info();
     for(int i = 0; i < Player::max_players; i++){
         if(Player::players[i].room == -1 && Player::players[i].fd != -1)
-            send(pfds[i].fd, msg.c_str(), msg.size(), 0);
+            send_to_player(i, msg);
     }
 
 };
+
+
+
+void Serv::send_to_player(int player_id, string msg){
+    lock_guard<std::mutex> lock(Player::players[player_id].mtx);
+    send(pfds[player_id].fd, msg.c_str(), msg.size(), 0);
+}

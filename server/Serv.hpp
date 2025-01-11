@@ -8,7 +8,6 @@
 #include <condition_variable>
 #include <queue>
 #include <string>
-#include <chrono>
 
 
 #include "Room.hpp"
@@ -53,6 +52,8 @@ class Serv {
     void send_to_room_members(int room_id);
 
     void send_to_lobby_members();
+
+    void send_to_player(int player_id, string msg);
 
 
     
