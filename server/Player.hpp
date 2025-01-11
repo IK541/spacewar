@@ -18,7 +18,7 @@ public:
     int fd;
     bool free;
 
-    static const int max_players = 6;
+    static const int max_players = 20;
     static Player players[max_players];
 
 
@@ -29,7 +29,12 @@ public:
 
     void make_free();
 
-    void setNick(char buffer[1024]);
+    void set_nick(char buffer[1024]);
+
+
+    string get_player_info();
+
+
     static int find_free_slot_serv(){
         
         for(int i = 0; i < max_players; i++){
@@ -38,4 +43,5 @@ public:
         }
         return -1;
     }
+
 };

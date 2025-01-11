@@ -1,5 +1,4 @@
 #include "Serv.hpp"
-
 #include <cstring>
 #include <sys/socket.h>
 #include <poll.h>
@@ -203,7 +202,6 @@ void Serv::handle_new_connection(pollfd pfds[], bool free_pfds[], int server_fd)
     close(client_fd);
 }
 
-
 void Serv::handle_client_input(int client_id, pollfd *pfds, bool *free_pfds) {
     char buffer[1024];
     string msg = "";
@@ -225,33 +223,69 @@ void Serv::handle_client_input(int client_id, pollfd *pfds, bool *free_pfds) {
     // Check if there's a message
     if (bytes_read > 0) {
         char first_char = buffer[0]; // First letter of the message
+        int room_char;
 
         switch (first_char) {
             case 'A':
             case 'a':
                 std::cout << "Client " << client_id << " sent an 'A'-type message: nick.\n";
-                // Handle 'A' type message
-                Player::players[client_id].setNick(buffer + 1);
-                send(pfds[client_id].fd, "Acknowledged A\n", 14, 0);
+                // receive nick from player
+                Player::players[client_id].set_nick(buffer + 1);
+                msg = "Y\n " + Player::players[client_id].nick;
+
+                send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
                 break;
 
             case 'B':
             case 'b':
                 std::cout << "Client " << client_id << " sent a 'B'-type message: get room info.\n";
-                // Handle 'B' type message
-                msg = Room::getGeneralRoomInfo();
+                // send all rooms info
+                msg = "Y\n";
+                
+                msg += Room::get_general_room_info();
                 
                 send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
                 break;
 
-            case 'C':
+            case 'C': // Send room details
             case 'c':
-                std::cout << "Client " << client_id << " sent a 'C'-type message: choosed room.\n";
-                // Handle 'C' type message
-                // TODO implement room choosing
-                // Send room details to player
-                send(pfds[client_id].fd, "Acknowledged C\n", 14, 0);
+                
+
+
+                std::cout << "Client " << client_id << " sent a 'C'-type message: get specific room info.\n";
+                if (buffer[2] < '0' && buffer[2] >'3') msg = "Y\n";
+                else{
+                    room_char = buffer[2] - '0';
+                    msg += Room::rooms[room_char].get_room_info();
+
+                }
+                send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
                 break;
+
+            case 'D': // enter room n
+            case 'd':
+                std::cout << "Client " << client_id << " sent a 'D'-type message: enter room.\n";
+                if (buffer[2] < '0' && buffer[2] >'3') msg = "Y\n";
+                else{
+                    room_char = buffer[2] - '0';
+                    msg = Room::rooms[room_char].join_room(client_id);
+                }
+
+                send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
+                break;
+
+            case 'E':
+            case 'e': // switch teams
+                std::cout << "Client " << client_id << " sent a 'E'-type message: switch team.\n";
+                
+                msg = Room::rooms[Player::players[client_id].room].switch_teams(client_id);
+                
+
+                send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
+                break;
+
+
+
             // TODO change ready state
             // TODO change game
             default:
@@ -262,8 +296,6 @@ void Serv::handle_client_input(int client_id, pollfd *pfds, bool *free_pfds) {
     }
 }
 
-
-
 void Serv::disconnect_client(int client_id, pollfd *pfds, bool *free_pfds) {
     close(pfds[client_id].fd);
     pfds[client_id].fd = -1;
@@ -272,7 +304,9 @@ void Serv::disconnect_client(int client_id, pollfd *pfds, bool *free_pfds) {
 
     if (Player::players[client_id].room != -1) {
         int room_id = Player::players[client_id].room;
-        Room::rooms[room_id].remove_player(client_id);
+        Room::rooms[Player::players[client_id].room].teams_player_number[Player::players[client_id].team]--;
+
+        Room::rooms[room_id].free_slots++;
     }
     Player::players[client_id].make_free();
     std::cout << "Client " << client_id << " has been disconnected.\n";
@@ -283,5 +317,3 @@ void Serv::handle_client_output(int client_id, pollfd *pfds, bool *free_pfds) {
     std::string msg = "Server new night response\n";
     send(pfds[client_id].fd, msg.c_str(), msg.size(), 0);
 }
-
-
