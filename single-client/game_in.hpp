@@ -67,6 +67,7 @@ class GameState : public DrawDataI {
     std::mutex mtx;
     public:
     GameState();
+    void reset();
     void set_game_state(GameOut game_out);
     // NEW
     DrawGameData get_game_state();

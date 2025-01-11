@@ -107,6 +107,15 @@ GameState::GameState():timestamp(0),ammo(0),respawn(0),center(sf::Vector2f(0.f,0
     memset(this->objects,0,TOTAL_ENTITIES*sizeof(SpaceObject));
 }
 
+void GameState::reset(){
+    this->timestamp = 0;
+    this->ammo = 0;
+    this->respawn = 0;
+    this->center = sf::Vector2f(0.f,0.f);
+    memset(this->objects_present,0,TOTAL_ENTITIES*sizeof(bool));
+    memset(this->objects,0,TOTAL_ENTITIES*sizeof(SpaceObject));
+}
+
 void GameState::get_space_objects(std::vector<SpaceObject*>* objects) {
     for(int i = 0; i < TOTAL_ENTITIES; ++i) {
         if(this->objects_present[i]) {

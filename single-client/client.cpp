@@ -4,6 +4,7 @@
 #include <vector>
 #include <thread>
 #include <mutex>
+#include <queue>
 
 #include "game_in.hpp"
 #include "game_out.hpp"
@@ -26,6 +27,8 @@
 #define STATE_LOBBY 1
 #define STATE_ROOM 2
 #define STATE_GAME 3
+#define STATE_BLUE 4
+#define STATE_RED 5
 
 #define MAX_NICK_LENGTH 12
 
@@ -38,36 +41,127 @@ int state;
 NameState name_state;
 LobbyState lobby_state;
 RoomState room_state;
-GameState game_state; // TODO: add reset, TODO: move to mutex proteted class with lobby State
+GameState game_state;
 
 sf::TcpSocket tcp_socket;
 sf::UdpSocket udp_socket;
 
 // functions
-
 void resize(sf::Event* event, sf::Vector2f* window_size);
 void set_view(sf::RenderWindow* window, sf::Vector2f window_size, sf::Vector2f center);
+void udp_receiver();
+void tcp_receiver();
+void handle_events();
 
-void udp_receiver() {
-    std::size_t size = 0;
-    uint8_t buffer[BUFFER_SIZE];
-    while(1) {
-        sf::IpAddress addr; unsigned short port;
-        udp_socket.receive(buffer, BUFFER_SIZE, size, addr, port);
-        GameOut data = UdpInputTranslator((uint8_t*)buffer, size);
-        game_state.set_game_state(data);
-        delete_GameOut(&data);
+int main() {
+    // Window
+    window.setFramerateLimit(FPS);
+
+    // Drawing
+    GameDrawer drawer;
+
+    sf::Font font;
+    if (!font.loadFromMemory(resources_font_ttf, resources_font_ttf_len)) {
+        printf("font error"); return -1;
     }
+
+    // Network
+    if(udp_socket.bind(CLIENT_PORT)) {
+        printf("bind error"); return -1;
+    }
+    std::thread udp_recv_thread(udp_receiver);
+    udp_recv_thread.detach();
+    if(tcp_socket.connect(sf::IpAddress(SERVER_ADDR), SERVER_PORT)) {
+        printf("connection error"); return -1;
+    }
+    std::thread tcp_recv_thread(tcp_receiver);
+    tcp_recv_thread.detach();
+
+    // input
+    InputCollector input_collector(&window);
+    InputTranslator input_translator(&window);
+
+    // State init
+    state = STATE_NAME;
+    name_state.name = std::string();
+    name_state.failed = true;
+    lobby_state.room_selected = 1;
+    lobby_state.rooms = std::vector<RoomInfo>();
+    lobby_state.rooms.push_back(RoomInfo{0,0,2,2});
+    lobby_state.rooms.push_back(RoomInfo{1,0,1,0});
+    lobby_state.rooms.push_back(RoomInfo{2,1,3,1});
+    room_state.blue = std::vector<PlayerInfo>();
+    room_state.blue.push_back(PlayerInfo{false,std::string("IK")});
+    room_state.blue.push_back(PlayerInfo{true,std::string("MP")});
+    room_state.red.push_back(PlayerInfo{true,std::string("JK")});
+
+    while (window.isOpen()) {
+        printf("%d\n", state);
+
+        // init phase
+        handle_events();
+
+        int current_state; {
+            std::lock_guard<std::mutex> lock(mtx);
+            current_state = state;
+        } switch (current_state) {
+        
+        // IN NAME:
+        case STATE_NAME:
+        draw_name(name_state, &window, &font, &mtx);
+        break;
+
+        // IN LOBBY:
+        case STATE_LOBBY:
+        draw_lobby(lobby_state, &window, &mtx);
+        break;
+
+        // IN ROOM:
+        case STATE_ROOM:
+        draw_room(room_state, &window, &font, &mtx);
+        break;
+
+        case STATE_BLUE:
+        draw_blue(&window, &font);
+        break;
+
+        case STATE_RED:
+        draw_red(&window, &font);
+        break;
+
+        // GAME RUNNING
+        case STATE_GAME:
+
+        // draw phase
+        WindowData window_data = WindowData{&window,window_size,game_state.get_center()};
+        set_view(&window, window_size, game_state.get_center());
+        drawer.add_all(&game_state);
+        window.clear();
+        drawer.draw(window_data);
+        window.display();
+        drawer.clear();
+
+        // user phase
+        UserInput user_input = input_collector.collect();
+        GameIn out_data = input_translator.translate(user_input);
+        uint8_t* bytes = UdpOutputTranslator(out_data);
+        udp_socket.send(bytes, 9, sf::IpAddress(SERVER_ADDR), SERVER_PORT);
+        delete [] bytes;
+        break;
+        
+        }
+    }
+
+    return 0;
 }
 
-void tcp_receiver() {
-    std::size_t size = 0;
-    uint8_t buffer[BUFFER_SIZE];
-    while(1) {
-        tcp_socket.receive(buffer, BUFFER_SIZE, size);
-        // TODO: handle tcp data
-        std::lock_guard<std::mutex> lock(mtx);
-    }
+void resize(sf::Event* event, sf::Vector2f* window_size) {
+    *window_size = sf::Vector2f(sf::Vector2u(event->size.width, event->size.height));
+}
+
+void set_view(sf::RenderWindow* window, sf::Vector2f window_size, sf::Vector2f center) {
+    sf::Vector2f v = get_view_size(window_size);
+    window->setView(sf::View(sf::FloatRect(center-v, 2.f*v)));
 }
 
 void handle_events() {
@@ -109,103 +203,109 @@ void handle_events() {
                 out.push_back(-1);
                 tcp_socket.send(out.c_str(), out.size());
             }
+            if(state == STATE_BLUE || state == STATE_RED) {
+                state = STATE_ROOM;
+            }
         }
     }
 }
 
-int main() {
-    // Window
-    window.setFramerateLimit(FPS);
-
-    // Drawing
-    GameDrawer drawer;
-
-    sf::Font font;
-    if (!font.loadFromMemory(resources_font_ttf, resources_font_ttf_len)) {
-        printf("font error"); return -1;
+void udp_receiver() {
+    std::size_t size = 0;
+    uint8_t buffer[BUFFER_SIZE];
+    while(1) {
+        sf::IpAddress addr; unsigned short port;
+        udp_socket.receive(buffer, BUFFER_SIZE, size, addr, port);
+        GameOut data = UdpInputTranslator((uint8_t*)buffer, size);
+        game_state.set_game_state(data);
+        delete_GameOut(&data);
     }
+}
 
-    // Network
-    udp_socket.bind(CLIENT_PORT);
-    std::thread recv_thread(udp_receiver);
-    recv_thread.detach();
-    // if(tcp_socket.connect(sf::IpAddress(SERVER_ADDR), SERVER_PORT)) {
-    //     printf("connection error"); return -1;
-    // }
+void tcp_receiver() {
+    std::size_t size = 0;
+    uint8_t buffer[BUFFER_SIZE];
+    std::queue<char> data;
 
-    // input
-    InputCollector input_collector(&window);
-    InputTranslator input_translator(&window);
-
-    // State init
-    state = STATE_NAME;
-    name_state.name = std::string();// std::string("BEG-TEST-END");
-    name_state.failed = true;
-    lobby_state.room_selected = 1;
-    lobby_state.rooms = std::vector<RoomInfo>();
-    lobby_state.rooms.push_back(RoomInfo{0,0,2,2});
-    lobby_state.rooms.push_back(RoomInfo{1,0,1,0});
-    lobby_state.rooms.push_back(RoomInfo{2,1,3,1});
-    room_state.blue = std::vector<PlayerInfo>();
-    room_state.blue.push_back(PlayerInfo{false,std::string("IK")});
-    room_state.blue.push_back(PlayerInfo{true,std::string("MP")});
-    room_state.red.push_back(PlayerInfo{true,std::string("JK")});
-
-    while (window.isOpen()) {
-
-        // init phase
-        handle_events();
-
-        switch (state) {
-        
-        // IN NAME:
-        case STATE_NAME:
-        draw_name(name_state, &window, &font, &mtx);
-        break;
-
-        // IN LOBBY:
-        case STATE_LOBBY:
-        draw_lobby(lobby_state, &window, &mtx);
-        // TODO: user input
-        break;
-
-        // IN ROOM:
-        case STATE_ROOM:
-        draw_room(room_state, &window, &font, &mtx);
-        // TODO: user input
-        break;
-
-        // GAME RUNNING
-        case STATE_GAME:
-
-        // draw phase
-        WindowData window_data = WindowData{&window,window_size,game_state.get_center()};
-        set_view(&window, window_size, game_state.get_center());
-        drawer.add_all(&game_state);
-        window.clear();
-        drawer.draw(window_data);
-        window.display();
-        drawer.clear();
-
-        // user phase
-        UserInput user_input = input_collector.collect();
-        GameIn out_data = input_translator.translate(user_input);
-        uint8_t* bytes = UdpOutputTranslator(out_data);
-        udp_socket.send(bytes, 9, sf::IpAddress(SERVER_ADDR), SERVER_PORT);
-        delete [] bytes;
-        break;
-        
+    char opcode = '-';
+    unsigned int bytes_expected = 0;
+    
+    while(1) {
+        tcp_socket.receive(buffer, BUFFER_SIZE, size);
+        for(unsigned int i = 0; i < size; ++i) data.push(buffer[i]);
+        while(data.size()) {
+            if(opcode == '-' && data.size()) {
+                opcode = data.front();
+                data.pop();
+                if(opcode == 'L') bytes_expected = 4*ROOM_COUNT;
+            }
+            if(opcode == 'R') { if(data.size()) {
+                bytes_expected = (int) data.front();
+                opcode = '>';
+                data.pop();
+            } else break; }
+            std::lock_guard<std::mutex> lock(mtx);
+            if(opcode == 'N') {
+                name_state.failed = true;
+                opcode = '-';
+            }
+            if(opcode == 'G') {
+                for(PlayerInfo player: room_state.blue) player.ready = false;
+                for(PlayerInfo player: room_state.red) player.ready = false;
+                game_state.reset();
+                state = STATE_GAME;
+                opcode = '-';
+            }
+            if(opcode == 'H') {
+                state = STATE_ROOM;
+                opcode = '-';
+            }
+            if(opcode == 'I') {
+                state = STATE_BLUE;
+                opcode = '-';
+            }
+            if(opcode == 'J') {
+                state = STATE_RED;
+                opcode = '-';
+            }
+            if(opcode == 'L') { if (data.size() >= bytes_expected) {
+                for(int i = 0; i < ROOM_COUNT; ++i) {
+                    lobby_state.rooms[i].id = data.front(); data.pop();
+                    lobby_state.rooms[i].is_game_running = data.front(); data.pop();
+                    lobby_state.rooms[i].blue_count = data.front(); data.pop();
+                    lobby_state.rooms[i].red_count = data.front(); data.pop();
+                }
+                opcode = '-';
+                bytes_expected = 0;
+            } else break; }
+            if(opcode == '>') { if(data.size() >= bytes_expected) {
+                room_state.blue.clear(); room_state.red.clear();
+                data.pop(); data.pop();
+                int blue = data.front(); data.pop();
+                int red = data.front(); data.pop();
+                for(int i = 0; i < blue; ++i) {
+                    bool ready = data.front(); data.pop();
+                    int len = data.front(); data.pop();
+                    std::string name;
+                    for(int j = 0; j < len; ++j) {
+                        name.push_back(data.front());
+                        data.pop();
+                    }
+                    room_state.blue.push_back(PlayerInfo{ready,name});
+                }
+                for(int i = 0; i < red; ++i) {
+                    bool ready = data.front(); data.pop();
+                    int len = data.front(); data.pop();
+                    std::string name;
+                    for(int j = 0; j < len; ++j) {
+                        name.push_back(data.front());
+                        data.pop();
+                    }
+                    room_state.red.push_back(PlayerInfo{ready,name});
+                }
+                opcode = '-';
+                bytes_expected = 0;
+            } else break; }
         }
     }
-
-    return 0;
-}
-
-void resize(sf::Event* event, sf::Vector2f* window_size) {
-    *window_size = sf::Vector2f(sf::Vector2u(event->size.width, event->size.height));
-}
-
-void set_view(sf::RenderWindow* window, sf::Vector2f window_size, sf::Vector2f center) {
-    sf::Vector2f v = get_view_size(window_size);
-    window->setView(sf::View(sf::FloatRect(center-v, 2.f*v)));
 }

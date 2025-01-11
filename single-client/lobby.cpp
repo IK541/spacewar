@@ -136,3 +136,23 @@ void draw_room(RoomState room_state, sf::RenderWindow* window, sf::Font* font, s
     for(sf::Text name: red_name) window->draw(name);
     window->display();
 }
+
+void draw_blue(sf::RenderWindow* window, sf::Font* font) {
+    window->setView(sf::View(sf::Vector2f(VIEW_SIZE,VIEW_SIZE), sf::Vector2f(2*VIEW_SIZE,2*VIEW_SIZE)));
+    sf::Text text("BLUE WON", *font, 240);
+    text.setFillColor(sf::Color(0,0,255));
+    text.move(0.21*VIEW_SIZE,0.85*VIEW_SIZE);
+    window->clear();
+    window->draw(text);
+    window->display();
+}
+
+void draw_red(sf::RenderWindow* window, sf::Font* font) {
+    window->setView(sf::View(sf::Vector2f(VIEW_SIZE,VIEW_SIZE), sf::Vector2f(2*VIEW_SIZE,2*VIEW_SIZE)));
+    sf::Text text("RED WON", *font, 240);
+    text.setFillColor(sf::Color(255,0,0));
+    text.move(0.21*VIEW_SIZE,0.85*VIEW_SIZE);
+    window->clear();
+    window->draw(text);
+    window->display();
+}
