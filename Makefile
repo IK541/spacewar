@@ -1,7 +1,7 @@
-all: client recv_server
+all: client server
 
-client: client/client.cpp
-	g++ -g client/client.cpp client/user_input.cpp client/draw.cpp -o target/client -lsfml-graphics -lsfml-window -lsfml-system -lsfml-network -lm -Wall
+client:
+	g++ single-client/client.cpp single-client/out.cpp single-client/in.cpp -o target/single-client  -lsfml-graphics -lsfml-window -lsfml-system -lsfml-network -lm -Wall -Wextra -pedantic -std=c++11 -g
 
-recv_server: server/recv_server.cpp
-	g++ -g server/recv_server.cpp -o target/recv_server -Wall
+server:
+	g++ single-server/server.cpp single-server/game_engine.cpp single-server/game_manager.cpp -o target/single-server  -lsfml-graphics -lsfml-window -lsfml-system -lsfml-network -lm -Wall -Wextra -pedantic -std=c++11 -g

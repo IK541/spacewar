@@ -1,7 +1,8 @@
 #pragma once
+
 #include <SFML/Window.hpp>
-#include <cmath>
-#include <cstdint>
+
+#include "../common.hpp"
 
 // structs
 
@@ -11,33 +12,21 @@ struct UserInput {
     bool rmb;
 };
 
-struct UdpSendData {
-    uint32_t timestamp;
-    float direction;
-    uint8_t flags;
-};
-
 struct TcpSendData {};
 
 struct SendData {
-    bool udp_present;
-    UdpSendData udp_data;
-    bool tcp_present;
-    TcpSendData tcp_data;
+    bool udp;
+    void* data;
 };
 
-// mock definitions
+// mocks
 
-class GameState {
-    public:
-    virtual bool is_game_running() = 0;
-};
-class MockGameState : public GameState {
+class MockGameState : public GameStateI {
     public:
     bool is_game_running() { return true; }
 };
 
-// objects full declarations
+// objects
 
 class InputCollector {
     private:
@@ -49,14 +38,15 @@ class InputCollector {
 
 class InputTranslator {
     private:
-    GameState* game_state;
+    GameStateI* game_state;
     sf::Window* window;
     uint32_t timer;
     public:
-    InputTranslator(GameState* game_state, sf::Window* window);
+    InputTranslator(GameStateI* game_state, sf::Window* window);
     void reset_timer();
+    // NEW
     SendData translate(UserInput input);
 };
 
 // NEW
-uint8_t* UdpOutputTranslator(UdpSendData data);
+uint8_t* UdpOutputTranslator(GameIn data);
