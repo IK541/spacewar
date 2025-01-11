@@ -183,7 +183,7 @@ bool Room::start_game() {
         }
     }
 
-    gm.run_game(p);
+    
 
 
 
@@ -195,6 +195,7 @@ bool Room::start_game() {
         msg_bin[i] = binary_lobby[i];
     }
     Serv::serv.send_to_lobby_members(msg_bin, 13);
+    gm.run_game(p);
     sleep(5);
     printf("Game has ended in room %i\n", id);
     playing = false;
