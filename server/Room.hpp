@@ -6,6 +6,8 @@
 #include <mutex>
 #include <condition_variable>
 #include <queue>
+#include <atomic>
+
 
 
 
@@ -28,7 +30,7 @@ public:
     std::condition_variable cv;
     std::queue<std::string> events;
     bool stop = false;
-    static bool work;
+    static std::atomic<bool> stop_flag_room;
 
 
     Room();
@@ -41,6 +43,8 @@ public:
     string get_binary_room_info();
 
     string join_room(int id);
+
+    static string leave_room(int id);
 
     string switch_teams(int id);
 

@@ -159,7 +159,9 @@ bool Room::start_game() {
     for(int i = 0; i < Player::max_players; i++){
         if(Player::players[i].room == id && Player::players[i].team == 0){
             GameManagerInput gmi;
-            gmi.ship_id = sh_id + i;
+            
+            gmi.ship_id = sh_id++;
+            cout << "ship id: " << gmi.ship_id << endl;
             gmi.addr = Player::players[i].address;
             p.push_back(gmi);
         }
@@ -168,7 +170,9 @@ bool Room::start_game() {
     for(int i = 0; i < Player::max_players; i++){
         if(Player::players[i].room == id && Player::players[i].team == 1){
             GameManagerInput gmi;
-            gmi.ship_id = sh_id + i;
+            gmi.ship_id = sh_id++;
+                        cout << "ship id: " << gmi.ship_id << endl;
+
             gmi.addr = Player::players[i].address;
             p.push_back(gmi);
         }
@@ -186,11 +190,11 @@ bool Room::start_game() {
         msg = "H\n";
         Serv::serv.send_to_room_members(id, msg);
     }
-    else if (game_state == 1){
+    else if (game_state == 2){
         msg = "I\n";
         Serv::serv.send_to_room_members(id, msg);
     }
-    else if (game_state == 2){
+    else if (game_state == 3){
         msg = "J\n";
         Serv::serv.send_to_room_members(id, msg);
     }
@@ -199,7 +203,6 @@ bool Room::start_game() {
 
     Serv::serv.send_to_lobby_members(msg);
 
-    sleep(5);
     printf("Game has ended in room %i\n", id);
     playing = false;
     return true;
@@ -231,9 +234,9 @@ string Room::get_binary_general_room_info() {
     
     for(int i = 0; i < max_rooms; i++){
         info += to_string(rooms[i].id) + " ";
+        info += to_string(rooms[i].playing) + " ";
         info += to_string(rooms[i].teams_player_number[0]) + " ";
         info += to_string(rooms[i].teams_player_number[1]) + " ";
-        info += to_string(rooms[i].playing) + " ";
     }
 
     info[info.size()-1] = '\n';
@@ -245,15 +248,7 @@ string Room::get_binary_general_room_info() {
 
 string Room::join_room(int _id){
     rooms_mutex.lock();
-    if(_id == -1){
-        Room::rooms[Player::players[_id].room].free_slots++;
-        Room::rooms[Player::players[_id].room].teams_player_number[Player::players[_id].team]--;
-        Player::players[_id].room = id;
-        free_slots--;
-        rooms_mutex.unlock();
-        return "Y\n";
-    }
-
+    
     if (free_slots == 0){
         rooms_mutex.unlock();
         return "N\n room full\n";
@@ -290,6 +285,19 @@ string Room::join_room(int _id){
     return "Y\n";
 }
 
+string Room::leave_room(int client_id){
+    rooms_mutex.lock();
+    if (Player::players[client_id].room == -1){
+        rooms_mutex.unlock();
+        return "N\n not in room\n";
+    }
+
+    Room::rooms[Player::players[client_id].room].free_slots++;
+    Room::rooms[Player::players[client_id].room].teams_player_number[Player::players[client_id].team]--;
+    Player::players[client_id].room = -1;
+    rooms_mutex.unlock();
+    return "Y\n";
+}
 
 string Room::switch_teams(int _id){
 
@@ -335,7 +343,7 @@ string Room::switch_teams(int _id){
 
 void Room::monitor(){
     std::cout << "monitoring room " << id << std::endl;
-    while (true) {
+    while (!stop_flag_room) {
         unique_lock<mutex> lock(game_mtx);
         cv.wait(lock, [this] { return !events.empty() || stop; });
 
@@ -352,4 +360,6 @@ void Room::monitor(){
             break;
         }
     }
+    cout << "room monitor stopped\n";
+
 }

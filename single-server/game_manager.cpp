@@ -93,15 +93,16 @@ void game_recv(int sfd, Players* players) {
         if(size < 9) continue;
         GameIn input = UdpInputTranslator((uint8_t*)buffer);
         players->set(addr, input);
-        printf("%d %f %d %d\n", input.timestamp, input.angle, input.engine_on, input.shoot);
     }
 }
 
 int GameManager::run_game(std::vector<GameManagerInput> players) {
+    printf("Running game\n");
     GameEngine game_engine;
     this->players->init(players);
-    for(GameManagerInput player: players)
+    for(GameManagerInput player: players) {
         game_engine.set_ship(player.ship_id);
+    }
 
     while(true) {
         uint64_t start = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();

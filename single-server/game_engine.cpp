@@ -4,8 +4,6 @@
 #include <ctime>
 
 
-// namespace Gamespace {
-
 PlayerGE::PlayerGE(int player_id, Ship* ship):id(player_id),ship(ship),
 ammo(MAX_AMMO),reload(0),rearm(0),respawn(RESPAWN_TIME),current_bullet(0),
 last_input(GameIn{0,(float)(ship->id<RED_TEAM_BEGIN?M_PI_2:-M_PI_2),false,false}){
@@ -333,7 +331,7 @@ void GameEngine::set_ship(int ship_id) {
     if(BLUE_TEAM_BEGIN <= ship_id && ship_id < RED_TEAM_BEGIN) {
         this->blue.players[ship_id-BLUE_TEAM_BEGIN].ship->player = this->blue.players+ship_id-BLUE_TEAM_BEGIN;
     } else if(RED_TEAM_BEGIN <= ship_id && ship_id < BLUE_BULLETS_BEGIN) {
-        this->blue.players[ship_id-RED_TEAM_BEGIN].ship->player = this->blue.players+ship_id-RED_TEAM_BEGIN;
+        this->red.players[ship_id-RED_TEAM_BEGIN].ship->player = this->blue.players+ship_id-RED_TEAM_BEGIN;
     }
 }
 
@@ -355,5 +353,3 @@ PlayerGE* GameEngine::get_player(int player_id) {
             return this->red.players+i;
     return NULL;
 }
-
-// } // namespace Gamespace
