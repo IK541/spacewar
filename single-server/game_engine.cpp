@@ -3,6 +3,7 @@
 #include <cmath>
 #include <ctime>
 
+#include <cstdio>
 
 PlayerGE::PlayerGE(int player_id, Ship* ship):id(player_id),ship(ship),
 ammo(MAX_AMMO),reload(0),rearm(0),respawn(RESPAWN_TIME),current_bullet(0),
@@ -106,7 +107,7 @@ void Collider::update_base(Movables* movables, Base* base, vec2 where, bool side
         }
     }
     // reload
-    for(int id = BLUE_TEAM_BEGIN; id < RED_TEAM_BEGIN; ++id) {
+    for(int id = BLUE_TEAM_BEGIN; id < BLUE_BULLETS_BEGIN; ++id) {
         vec2 pos = movables->items[id-1]->position;
         if((pos.x-where.x)*(pos.x-where.x)+(pos.y-where.y)*(pos.y-where.y)<BASE_RADIUS*BASE_RADIUS && get_side(id) == side) {
             PlayerGE* player = ((PlayerGE*)((Ship*)movables->items[id-1])->player);
@@ -296,7 +297,7 @@ int GameEngine::update_physics(double dt) {
 int GameEngine::get_winner() {
     return !this->red.base.hp ? BLUE_WIN :
         !this->blue.base.hp ? RED_WIN :
-        !this->timestamp ? DRAW : NO_WIN;
+        this->timestamp > DRAW_TIME ? DRAW : NO_WIN;
 }
 
 void GameEngine::update_input(int ship_id, GameIn input) {
