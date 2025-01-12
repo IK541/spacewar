@@ -4,11 +4,6 @@
 
 Player::Player(){
     address = {};
-    if(fd > 0) {
-        shutdown(fd, SHUT_RDWR);
-        close(fd);
-    }
-    fd = -1;
     ready = false;
     team = 0;
     nick = ""; //"free player";
@@ -16,9 +11,8 @@ Player::Player(){
     free = true;
 }
 
-void Player::take(sockaddr_in _address, int _fd){
+void Player::take(sockaddr_in _address){
     address = _address;
-    fd = _fd;
     ready = false;
     team = 0;
     nick = "";
@@ -30,7 +24,6 @@ void Player::take(sockaddr_in _address, int _fd){
 
 void Player::make_free(){
     address = {};
-    fd = -1;
     ready = false;
     team = 0;
     nick = "";
@@ -93,8 +86,7 @@ string Player::change_ready_state(){
     if(ready) ready = 0;
     else ready = 1;
     printf("Y\nready state changed to %i\n", ready);
-    Serv::serv.events.push("1" + std::to_string(room));// FAILS HERE
-    Serv::serv.cv.notify_one();
+
 
     if (Room::rooms[room].get_player_count() == Room::rooms[room].get_ready_players()
     &&  Room::rooms[room].teams_player_number[0] > 0
@@ -104,6 +96,10 @@ string Player::change_ready_state(){
                 Room::rooms[room].events.push("0");
                 Room::rooms[room].cv.notify_one();
 
+    }
+    else{
+        Serv::serv.events.push("1" + std::to_string(room));// FAILS HERE
+        Serv::serv.cv.notify_one();
     }
 
 

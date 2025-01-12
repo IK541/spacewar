@@ -30,7 +30,7 @@ public:
 
     Player();
 
-    void take(sockaddr_in _address, int _fd);
+    void take(sockaddr_in _address);
 
     void make_free();
 

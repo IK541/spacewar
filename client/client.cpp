@@ -105,7 +105,6 @@ int main(int argc, char** argv) {
     room_state.red = std::vector<PlayerInfo>();
 
     while (window.isOpen()) {
-        // printf("%d\n", state);
 
         // init phase
         handle_events();
@@ -241,7 +240,10 @@ void tcp_receiver() {
 
     char opcode = '-';    
     while(1) {
-        tcp_socket.receive(buffer, BUFFER_SIZE, size);
+        if(tcp_socket.receive(buffer, BUFFER_SIZE, size) != sf::Socket::Status::Done) {
+            printf("Connection error\n");
+            exit(-1);
+        }
         for(unsigned int i = 0; i < size; ++i) {
             if(buffer[i] != '\n') {
                 data.push(buffer[i]);
@@ -301,13 +303,10 @@ void tcp_receiver() {
                     } else item.push_back(data.front());
                     data.pop();
                 } vals.push_back(item);
-                for(std::string val: vals) printf("%s\n", val.c_str());
                 if(vals.size() < 4) goto end;
                 uint8_t room_id = (uint8_t)stoi(vals[0]);
                 uint8_t blue = (uint8_t)stoi(vals[2]);
                 uint8_t red = (uint8_t)stoi(vals[3]);
-                printf("blue: %d\n", blue & 0xff);
-                printf("red: %d\n", red & 0xff);
                 if(vals.size() != 4U + 2U * (blue + red)) goto end;
                 room_state.blue.clear(); room_state.red.clear();
                 for(int i = 4; i < 4 + 2 * blue; i += 2) {

@@ -121,7 +121,7 @@ void Serv::handle_new_connection() {
             pfds[i].events = POLLIN;
             std::cout << "Client connected on slot " << i << "\n";
 
-            Player::players[i].take(player_address, client_fd);
+            Player::players[i].take(player_address);
             return;
         }
     }
@@ -235,25 +235,28 @@ void Serv::handle_client_input(int client_id) {
 }
 
 void Serv::disconnect_client(int client_id) {
-    lock_guard<std::mutex> lock(mtx);
-    if (Player::players[client_id].room != -1)
-        events.push("0" + std::to_string(Player::players[client_id].room));
-    cv.notify_one();
+    if (pfds[client_id].fd > 0){
+        lock_guard<std::mutex> lock(mtx);
 
-    if(pfds[client_id].fd > 0)
-        close(pfds[client_id].fd);
-    pfds[client_id].fd = -1;
-    pfds[client_id].events = 0;
-    free_pfds[client_id] = false;
+        if (Player::players[client_id].room != -1)
+            events.push("0" + std::to_string(Player::players[client_id].room));
+        cv.notify_one();
 
-    if (Player::players[client_id].room != -1) {
-        int room_id = Player::players[client_id].room;
-        Room::rooms[Player::players[client_id].room].teams_player_number[Player::players[client_id].team]--;
+        if(pfds[client_id].fd > 0)
+            close(pfds[client_id].fd);
+        pfds[client_id].fd = -1;
+        pfds[client_id].events = 0;
+        free_pfds[client_id] = false;
 
-        Room::rooms[room_id].free_slots++;
-    }
-    Player::players[client_id].make_free();
-    std::cout << "Client " << client_id << " has been disconnected.\n";
+        if (Player::players[client_id].room != -1) {
+            int room_id = Player::players[client_id].room;
+            Room::rooms[Player::players[client_id].room].teams_player_number[Player::players[client_id].team]--;
+
+            Room::rooms[room_id].free_slots++;
+        }
+        Player::players[client_id].make_free();
+        std::cout << "Client " << client_id << " has been disconnected.\n";
+        }
 }
 
 void Serv::handle_client_output(int client_id) {
@@ -269,8 +272,8 @@ void Serv::cleanup(){
     lock_guard<std::mutex> room_lock(Room::rooms_mutex);
     for(int i = 0; i < Player::max_players; ++i)
         Player::players[i].mtx.lock();
-    shutdown(server_fd, SHUT_RDWR);
-    close(server_fd);
+    shutdown(pfds[MAX_CLIENTS].fd, SHUT_RDWR);
+    close(pfds[MAX_CLIENTS].fd);
 
     for(int i = Player::max_players - 1; i >= 0; i--) {
         Player::players[i].make_free();
@@ -370,6 +373,7 @@ void Serv::send_to_lobby_members(char* msg, int len){
     }
 
 };
+
 
 void Serv::send_to_player(int player_id, string msg){
     if ((Player::players[player_id].nick == "" && msg[0] != 'N') ) return;
