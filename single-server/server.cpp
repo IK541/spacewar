@@ -11,7 +11,7 @@
 #define LISTEN_QUEUE 1
 #define BUFFER_SIZE 4096
 
-#define SERVER_PORT 10000
+#define SERVER_PORT 8080
 
 #define SHIP_ID 1
 #define ROOM_ID 0
