@@ -93,7 +93,6 @@ void game_recv(int sfd, Players* players) {
         if(size < 9) continue;
         GameIn input = UdpInputTranslator((uint8_t*)buffer);
         players->set(addr, input);
-        // printf("%d %f %d %d\n", input.timestamp, input.angle, input.engine_on, input.shoot);
     }
 }
 
@@ -103,7 +102,6 @@ int GameManager::run_game(std::vector<GameManagerInput> players) {
     this->players->init(players);
     for(GameManagerInput player: players) {
         game_engine.set_ship(player.ship_id);
-        printf("sid: %d ipaddr: %x port: %d\n", player.ship_id, player.addr.sin_addr.s_addr, player.addr.sin_port);
     }
 
     while(true) {
