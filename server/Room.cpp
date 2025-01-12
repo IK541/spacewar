@@ -159,7 +159,7 @@ bool Room::start_game() {
     for(int i = 0; i < Player::max_players; i++){
         if(Player::players[i].room == id && Player::players[i].team == 0){
             GameManagerInput gmi;
-            gmi.ship_id = sh_id + i;
+            gmi.ship_id = sh_id++;
             gmi.addr = Player::players[i].address;
             p.push_back(gmi);
         }
@@ -168,7 +168,7 @@ bool Room::start_game() {
     for(int i = 0; i < Player::max_players; i++){
         if(Player::players[i].room == id && Player::players[i].team == 1){
             GameManagerInput gmi;
-            gmi.ship_id = sh_id + i;
+            gmi.ship_id = sh_id++;
             gmi.addr = Player::players[i].address;
             p.push_back(gmi);
         }
