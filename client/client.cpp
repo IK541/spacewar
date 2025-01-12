@@ -15,7 +15,7 @@
 #define WINDOW_SIZE 800
 
 #define SERVER_ADDR "127.0.0.1"
-#define SERVER_PORT 8080
+#define SERVER_PORT 56789
 #define CLIENT_PORT 9001
 #define BIND_ATTEMPTS 20
 
@@ -58,8 +58,8 @@ void tcp_receiver();
 void handle_events();
 
 int main(int argc, char** argv) {
-    if(argc < 3) {
-        printf("address & port required\n");
+    if(argc < 2) {
+        printf("address & required\n");
         exit(-1);
     }
 
@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     } port = udp_socket.getLocalPort();
     std::thread udp_recv_thread(udp_receiver);
     udp_recv_thread.detach();
-    if(tcp_socket.connect(sf::IpAddress(argv[1]), std::stoi(argv[2]))) {
+    if(tcp_socket.connect(sf::IpAddress(argv[1]), SERVER_PORT))) {
         printf("connection error\n"); return -1;
     }
     std::thread tcp_recv_thread(tcp_receiver);
