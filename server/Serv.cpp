@@ -155,236 +155,68 @@ void Serv::handle_client_input(int client_id) {
     std::cout << "Received from client " << client_id << ": " << buffer << "\n";
 
     char opcode = '-';
-    unsigned int bytes_expected = 0;
-    for(int i = 0; i < bytes_read; ++i) Player::players[client_id].data.push(buffer[i]);        
-    while(Player::players[client_id].data.size()) {
-        if(opcode == '-' && Player::players[client_id].data.size()) {
-            opcode = Player::players[client_id].data.front();
-            Player::players[client_id].data.pop();
-        }
-        if(opcode == 'A') {
-            if(Player::players[client_id].data.size() >= 2) {
-                bytes_expected = (int) Player::players[client_id].data.front();
-                Player::players[client_id].data.pop();
-                bytes_expected = 10 * bytes_expected + (int) Player::players[client_id].data.front();
-                Player::players[client_id].data.pop();
-                opcode = '>';
-            } else break;
-        }
-        if(opcode == 'E') {
+    for(int i = 0; i < bytes_read; ++i) {
+        if(buffer[i] != '\n') {
+            Player::players[client_id].data.push(buffer[i]);
+            continue;
+        } if(!Player::players[client_id].data.size()) continue;
+        try {
+        opcode = Player::players[client_id].data.front();
+        Player::players[client_id].data.pop();
+        if(opcode == 'E') { // change teams
             {
                 lock_guard<std::mutex> lock(mtx);
                 std::cout << "Client " << client_id << " sent a 'E'-type message: switch team.\n";
-                
                 msg = Room::rooms[Player::players[client_id].room].switch_teams(client_id);
-                
-                if(msg[0] == 'Y')
-                        events.push("0" + std::to_string(Player::players[client_id].room));
-
-                send_to_player(client_id, msg);
+                if(msg[0] == 'Y') events.push("0" + std::to_string(Player::players[client_id].room));
                 cv.notify_one();
             }
-            opcode = '-';
         }
-        if(opcode == 'F') {
+        if(opcode == 'F') { // change state
             {
             lock_guard<std::mutex> lock(mtx);
             std::cout << "Client " << client_id << " sent a 'F'-type message: change ready state.\n";
-
             msg = Player::players[client_id].change_ready_state();
-            if(msg[0] == 'Y')
-                    events.push("1" + std::to_string(Player::players[client_id].room));// FAILS HERE
-            else
-                send_to_player(client_id, "N");
+            events.push("1" + std::to_string(Player::players[client_id].room));// FAILS HERE
             cv.notify_one();
             }
-            opcode = '-';
         }
-        if(opcode == 'D') {
-            if(Player::players[client_id].data.size()) {
-                int room = (int) Player::players[client_id].data.front() - '0';
+        if(opcode == 'D') { // join room
+            std::string room_str;
+            Player::players[client_id].data.pop();
+            while(Player::players[client_id].data.size()) {
+                room_str.push_back(Player::players[client_id].data.front());
                 Player::players[client_id].data.pop();
-                {
+            } int room = stoi(room_str);
+            {
                 lock_guard<std::mutex> lock(mtx);
                 std::cout << "Client " << client_id << " sent a 'D'-type message: enter room.\n";
                     msg = Room::rooms[room].join_room(client_id);
                     if(msg[0] == 'Y') events.push("0" + std::to_string(room));
-
-                send_to_player(client_id, msg);
                 cv.notify_one();
-                }
-                opcode = '-';
-            } else break;
+            }
         }
-        if(opcode == '>') {
-            if (Player::players[client_id].data.size() >= bytes_expected) {
-                std::string name;
-                for(unsigned int i = 0; i < bytes_expected; ++i) {
-                    name.push_back(Player::players[client_id].data.front());
-                    Player::players[client_id].data.pop();
-                }
-                
-                {
-                std::cout << "Client " << client_id << " sent an 'A'-type message: nick.\n";
-                // receive nick from player
-                lock_guard<std::mutex> lock(mtx);
-
-                if(Player::players[client_id].set_nick(name)){
-                    vector<char> binary_lobby = Room::get_binary_general_room_info();
-                    char bf[13];
-                    for (int i = 0; i <= 13; i++)
-                        bf[i] = binary_lobby[i];
-
-                    send_to_player(client_id, bf, 13);
-                }
-                else
-                    send_to_player(client_id, "N");
-                
-                }
-
-                bytes_expected = 0;
-                opcode = '-';
-            } else break;
+        if(opcode == 'A') {
+            std::string name;
+            Player::players[client_id].data.pop();
+            while(Player::players[client_id].data.size()) {
+                name.push_back(Player::players[client_id].data.front());
+                Player::players[client_id].data.pop();
+            }
+            {
+            std::cout << "Client " << client_id << " sent an 'A'-type message: nick.\n";
+            // receive nick from player
+            lock_guard<std::mutex> lock(mtx);
+            if(Player::players[client_id].set_nick(name)){
+                string binary_lobby = Room::get_binary_general_room_info();
+                send_to_player(client_id, binary_lobby);
+            } else send_to_player(client_id, "N\n");
+            }
         }
+        } catch(...) { printf("recv exception\n"); }
+        Player::players[client_id].data = {};
     }
 }
-
-
-    /*
-    if (bytes_read > 0) {
-        char first_char = buffer[0]; // First letter of the message
-        int room_char;
-
-        switch (first_char) {
-            case 'A':
-            case 'a':
-            
-                {
-                nick = string(buffer).substr(2, bytes_read);
-                std::cout << "Client " << client_id << " sent an 'A'-type message: nick.\n";
-                // receive nick from player
-                lock_guard<std::mutex> lock(mtx);
-
-                if(Player::players[client_id].set_nick(nick)){
-                    vector<char> binary_lobby = Room::get_binary_general_room_info();
-                    char bf[13];
-                    for (int i = 0; i <= 13; i++)
-                        bf[i] = binary_lobby[i];
-
-                    send_to_player(client_id, bf, 13);
-                }
-                else
-                    send_to_player(client_id, "N");
-                
-                }
-                break;
-                
-
-            case 'B':
-            case 'b':
-
-            
-                std::cout << "Client " << client_id << " sent a 'B'-type message: get room info.\n";
-                // send all rooms info
-                msg = "";
-                
-                msg += Room::get_general_room_info();
-                
-                send_to_player(client_id, msg);
-                cv.notify_one();
-                break;
-
-            // case 'C': // Send room details
-            // case 'c':
-                
-
-
-            //     std::cout << "Client " << client_id << " sent a 'C'-type message: get specific room info.\n";
-            //     if (buffer[2] < '0' && buffer[2] >'3') msg = "N\n";
-            //     else{
-            //         room_char = buffer[2] - '0';
-            //         msg += Room::rooms[room_char].get_room_info();
-
-            //     }
-            //     send_to_player(client_id, msg);
-            //     cv.notify_one();
-            //     break;
-            // human like
-            case 'Z': // Send room details
-            case 'z':
-                
-
-
-                std::cout << "Client " << client_id << " sent a 'Z'-type message: get specific room info.\n";
-                if (buffer[2] < '0' && buffer[2] >'3') msg = "N\n";
-                else{
-                    room_char = buffer[2] - '0';
-                    msg += Room::rooms[room_char].get_room_info_human();
-
-                }
-                send_to_player(client_id, msg);
-                cv.notify_one();
-                break;
-
-            case 'D': // enter room n
-            case 'd':
-                {
-                lock_guard<std::mutex> lock(mtx);
-                std::cout << "Client " << client_id << " sent a 'D'-type message: enter room.\n";
-                if (buffer[2] < '0' && buffer[2] >'3') msg = "N";
-                else{
-                    room_char = buffer[2] - '0';
-
-
-                    msg = Room::rooms[room_char].join_room(client_id);
-                    if(msg[0] == 'Y')
-                        events.push("0" + std::to_string(room_char));
-
-                }
-                send_to_player(client_id, msg);
-                cv.notify_one();
-                }
-                break;
-                
-
-            case 'E':
-            case 'e': // switch teams
-                {
-                lock_guard<std::mutex> lock(mtx);
-                std::cout << "Client " << client_id << " sent a 'E'-type message: switch team.\n";
-                
-                msg = Room::rooms[Player::players[client_id].room].switch_teams(client_id);
-                
-                if(msg[0] == 'Y')
-                        events.push("0" + std::to_string(Player::players[client_id].room));
-
-                send_to_player(client_id, msg);
-                cv.notify_one();
-                }
-                break;
-
-            case 'F':
-            case 'f':
-                {
-                lock_guard<std::mutex> lock(mtx);
-                std::cout << "Client " << client_id << " sent a 'F'-type message: change ready state.\n";
-
-                msg = Player::players[client_id].change_ready_state();
-                if(msg[0] == 'Y')
-                        events.push("1" + std::to_string(Player::players[client_id].room));// FAILS HERE
-                else
-                    send_to_player(client_id, "N");
-                cv.notify_one();
-                }
-                break;
-
-            default:
-                std::cout << "Client " << client_id << " sent an unrecognized message type: " << first_char << "\n";
-                send(pfds[client_id].fd, "Unrecognized command\n", 21, 0);
-                break;
-        }
-    }
-    */
 
 void Serv::disconnect_client(int client_id) {
     lock_guard<std::mutex> lock(mtx);
@@ -453,28 +285,21 @@ void Serv::monitor(){
 
         while (!events.empty()) {
             string msg = "";
-            vector<char> binary_lobby;
+            string binary_lobby;
                         // events type:= 0: detailed, 1: general
             string event = events.front();
             cout << "detected event: " << event << endl;
             if(event[0] == '0'){ // detailed room info update
-                binary_lobby = Room::rooms[stoi(event.substr(1))].get_room_info();
-                int len = binary_lobby.size();
-                char msg_bin_room[len];
-                for(unsigned int i = 0; i < binary_lobby.size(); i++){
-                    msg_bin_room[i] = binary_lobby[i];
-                }
-                send_to_room_members(stoi(event.substr(1)), msg_bin_room, binary_lobby.size());
+                binary_lobby = Room::get_binary_general_room_info();
+                send_to_lobby_members(binary_lobby);
+
             }
+            binary_lobby = Room::rooms[stoi(event.substr(1))].get_binary_room_info();
+
+            send_to_room_members(stoi(event.substr(1)), binary_lobby);      
 
 
-            char msg_bin[13];
-            binary_lobby = Room::get_binary_general_room_info();
-            for(int i = 0; i < 14; i++){
-                msg_bin[i] = binary_lobby[i];
-            }
-            send_to_lobby_members(msg_bin, 13);
-
+           
             events.pop();
         }
 

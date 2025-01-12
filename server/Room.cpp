@@ -11,6 +11,7 @@
 #include <iostream>
 #include "../single-server/game_manager.hpp"
 
+
 using namespace std;
 
 
@@ -45,11 +46,10 @@ int Room::get_player_count() {
     
     return count;
 }
-
-vector<char> Room::get_room_info(){
+// DONE NOT TESTED
+string Room::get_binary_room_info(){
 
 //[0] msg type
-//[1] msg len
 //[1] 0 -> room
 //[2] 0 -> Started
 //[3] team 0 how many players
@@ -67,42 +67,32 @@ vector<char> Room::get_room_info(){
 
 
 
-    vector<char> info;
-    
-    info.push_back('R'); // 0
-    info.push_back(char(0)); // len to alter
-    info.push_back(char(id)); // room id
-    info.push_back(char(playing)); // started
-    info.push_back(char(teams_player_number[0])); // team 0 how many players
-    info.push_back(char(teams_player_number[1])); // team 1 how many players
+    string info = "R ";
+
+    info += to_string(id) + " ";
+    info += to_string(playing) + " ";
+    info += to_string(teams_player_number[0]) + " ";
+    info += to_string(teams_player_number[1]) + " ";
 
     // team 1
     
     for(int i = 0; i < Player::max_players; i++){
         if(Player::players[i].room == id && Player::players[i].team == 0){
-            info.push_back(char(Player::players[i].ready));
-            info.push_back(char(Player::players[i].nick.size()));
-            for(unsigned int j = 0; j < Player::players[i].nick.size(); j++){
-                info.push_back(Player::players[i].nick[j]);
-            }
+            info += to_string(Player::players[i].ready) + " ";
+            info += Player::players[i].nick + " ";
         }
-
     }
 
     // team 2
 
     for(int i = 0; i < Player::max_players; i++){
         if(Player::players[i].room == id && Player::players[i].team == 1){
-            info.push_back(char(Player::players[i].ready));
-            info.push_back(char(Player::players[i].nick.size()));
-            for(unsigned int j = 0; j < Player::players[i].nick.size(); j++){
-                info.push_back(Player::players[i].nick[j]);
-            }
+            info += to_string(Player::players[i].ready) + " ";
+            info += Player::players[i].nick + " ";
         }
-
     }
 
-    info[1] = info.size();
+    info[info.size()-1] = '\n';
 
 
 
@@ -149,6 +139,7 @@ string Room::get_room_info_human(){
 
     return info;}
 
+// DONE NOT TESTED
 bool Room::start_game() {
     unique_lock<mutex> lock(mtx);
 
@@ -183,19 +174,31 @@ bool Room::start_game() {
         }
     }
 
-    
 
-
-
-    Serv::serv.send_to_room_members(id, "G"+to_string(id)+"\n");
+    string msg = "G\n";
+    Serv::serv.send_to_room_members(id, msg);
     // notify lobby members
-    char msg_bin[13];
-    vector<char> binary_lobby = Room::get_binary_general_room_info();
-    for(int i = 0; i < 14; i++){
-        msg_bin[i] = binary_lobby[i];
+    string binary_lobby = Room::get_binary_general_room_info();
+
+    Serv::serv.send_to_lobby_members(binary_lobby);
+    int game_state = gm.run_game(p);
+    if (game_state == DRAW){
+        msg = "H\n";
+        Serv::serv.send_to_room_members(id, msg);
     }
-    Serv::serv.send_to_lobby_members(msg_bin, 13);
-    gm.run_game(p);
+    else if (game_state == 1){
+        msg = "I\n";
+        Serv::serv.send_to_room_members(id, msg);
+    }
+    else if (game_state == 2){
+        msg = "J\n";
+        Serv::serv.send_to_room_members(id, msg);
+    }
+
+    msg = Room::get_binary_general_room_info();
+
+    Serv::serv.send_to_lobby_members(msg);
+
     sleep(5);
     printf("Game has ended in room %i\n", id);
     playing = false;
@@ -220,19 +223,21 @@ string Room::get_general_room_info() {
 
     return info;
 }
-
-vector<char> Room::get_binary_general_room_info() {
+// DONE NOT TESTED
+string Room::get_binary_general_room_info() {
     // L + 3x<ID/blue/red/started>
 
-    vector<char>  info;
-    info.push_back('L');
+    string info = "L ";
     
     for(int i = 0; i < max_rooms; i++){
-        info.push_back(char(rooms[i].id));
-        info.push_back(char(rooms[i].teams_player_number[0]));
-        info.push_back(char(rooms[i].teams_player_number[1]));
-        info.push_back(char(rooms[i].playing));
+        info += to_string(rooms[i].id) + " ";
+        info += to_string(rooms[i].teams_player_number[0]) + " ";
+        info += to_string(rooms[i].teams_player_number[1]) + " ";
+        info += to_string(rooms[i].playing) + " ";
     }
+
+    info[info.size()-1] = '\n';
+
     return info;   
 }
 
@@ -288,8 +293,6 @@ string Room::join_room(int _id){
 
 string Room::switch_teams(int _id){
 
-
-    
 
     if (Player::players[_id].room == -1){
         return "N\n not in room\n";
