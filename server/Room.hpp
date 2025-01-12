@@ -30,7 +30,7 @@ public:
     std::queue<std::string> events;
     bool stop = false;
     static bool work;
-    GameManager gm;
+    GameManager* gm;
 
     Room();
 

@@ -93,10 +93,7 @@ void monitor_changes(){
 }
 
 
-
 int main(){
-
-
 
     // signal(SIGINT, signalHandler); // Handle Ctrl+C (SIGINT)
 

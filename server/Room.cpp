@@ -16,7 +16,7 @@ using namespace std;
 
 
 
-Room::Room() : gm(free_room_id + 1) {
+Room::Room() : gm(new GameManager(free_room_id + 1)) {
     id = free_room_id++;
     playing = false;
     free_slots = max_players;
@@ -149,7 +149,7 @@ bool Room::start_game() {
         Player::players[i].ready = false;
     }
 
-    GameManager gm(id + 1);
+    // GameManager* gm = game_managers[this->id];
 
     vector<GameManagerInput> p;
 
@@ -184,7 +184,8 @@ bool Room::start_game() {
     string binary_lobby = Room::get_binary_general_room_info();
 
     Serv::serv.send_to_lobby_members(binary_lobby);
-    int game_state = gm.run_game(p);
+
+    int game_state = this->gm->run_game(p);
 
     msg = Room::rooms[id].get_binary_room_info();
 
