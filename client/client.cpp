@@ -59,7 +59,7 @@ void handle_events();
 
 int main(int argc, char** argv) {
     if(argc < 2) {
-        printf("address & required\n");
+        printf("address required\n");
         exit(-1);
     }
 
@@ -86,7 +86,7 @@ int main(int argc, char** argv) {
     } port = udp_socket.getLocalPort();
     std::thread udp_recv_thread(udp_receiver);
     udp_recv_thread.detach();
-    if(tcp_socket.connect(sf::IpAddress(argv[1]), SERVER_PORT))) {
+    if(tcp_socket.connect(sf::IpAddress(argv[1]), SERVER_PORT)) {
         printf("connection error\n"); return -1;
     }
     std::thread tcp_recv_thread(tcp_receiver);
