@@ -62,7 +62,7 @@ void Serv::serve(){
 
 
     std::cout << "Server is listening on port " << port << "...\n";
-    while (work) {
+    while (!stop_flag_serv) {
         int num_events = poll(pfds, MAX_CLIENTS + 1, -1);
         if (num_events < 0) {
             perror("Poll failed");
@@ -99,7 +99,8 @@ void Serv::serve(){
         }
     }
 
-    close(server_fd);
+    cout << "Server shutting down...\n";
+
     return;
 }
 
@@ -121,7 +122,7 @@ void Serv::handle_new_connection() {
             pfds[i].events = POLLIN;
             std::cout << "Client connected on slot " << i << "\n";
 
-            Player::players[i].take(player_address, client_fd);
+            Player::players[i].take(player_address);
             return;
         }
     }
@@ -177,8 +178,7 @@ void Serv::handle_client_input(int client_id) {
             lock_guard<std::mutex> lock(mtx);
             std::cout << "Client " << client_id << " sent a 'F'-type message: change ready state.\n";
             msg = Player::players[client_id].change_ready_state();
-            events.push("1" + std::to_string(Player::players[client_id].room));// FAILS HERE
-            cv.notify_one();
+            
             }
 
         }
@@ -189,26 +189,42 @@ void Serv::handle_client_input(int client_id) {
                 room_str.push_back(Player::players[client_id].data.front());
                 Player::players[client_id].data.pop();
             } int room = stoi(room_str);
+            int old_room = Player::players[client_id].room;
             {
                 lock_guard<std::mutex> lock(mtx);
-                std::cout << "Client " << client_id << " sent a 'D'-type message: enter room.\n";
+                if (room >= 0){
+                    std::cout << "Client " << client_id << " sent a 'D'-type message: enter room.\n";
                     msg = Room::rooms[room].join_room(client_id);
                     if(msg[0] == 'Y') events.push("0" + std::to_string(room));
+
+                }else{
+                    std::cout << "Client " << client_id << " sent a 'D'-type message: leave room.\n";
+                    msg = Room::leave_room(client_id);
+                    if(msg[0] == 'Y') events.push("2" + std::to_string(old_room));
+
+                    room = -2;
+                    
+                }
                 cv.notify_one();
             }
         }
         if(opcode == 'A') {
             std::string name;
+            std::string port_str;
             Player::players[client_id].data.pop();
-            while(Player::players[client_id].data.size()) {
+            while(Player::players[client_id].data.size() && Player::players[client_id].data.front() != ' ') {
                 name.push_back(Player::players[client_id].data.front());
                 Player::players[client_id].data.pop();
-            }
+            } Player::players[client_id].data.pop();
+            while(Player::players[client_id].data.size() && Player::players[client_id].data.front() != ' ') {
+                port_str.push_back(Player::players[client_id].data.front());
+                Player::players[client_id].data.pop();
+            } port = stoi(port_str);
             {
             std::cout << "Client " << client_id << " sent an 'A'-type message: nick.\n";
             // receive nick from player
             lock_guard<std::mutex> lock(mtx);
-            if(Player::players[client_id].set_nick(name)){
+            if(Player::players[client_id].set_nick(name, port)){
                 string binary_lobby = Room::get_binary_general_room_info();
                 send_to_player(client_id, binary_lobby);
             } else send_to_player(client_id, "N\n");
@@ -221,12 +237,17 @@ void Serv::handle_client_input(int client_id) {
 
 void Serv::disconnect_client(int client_id) {
     lock_guard<std::mutex> lock(mtx);
-    if (Player::players[client_id].room != -1)
+    if (Player::players[client_id].room != -1 && pfds[client_id].fd != -1) {
         events.push("0" + std::to_string(Player::players[client_id].room));
     cv.notify_one();
 
-    if(pfds[client_id].fd > 0)
+        if (shutdown(pfds[client_id].fd, SHUT_RDWR) == -1) {
+            if (errno == EBADF) 
+                cout << "socked has been down\n"; 
+}
         close(pfds[client_id].fd);
+    
+        
     pfds[client_id].fd = -1;
     pfds[client_id].events = 0;
     free_pfds[client_id] = false;
@@ -239,6 +260,7 @@ void Serv::disconnect_client(int client_id) {
     }
     Player::players[client_id].make_free();
     std::cout << "Client " << client_id << " has been disconnected.\n";
+    }
 }
 
 void Serv::handle_client_output(int client_id) {
@@ -249,38 +271,22 @@ void Serv::handle_client_output(int client_id) {
 
 
 void Serv::cleanup(){
-
-    lock_guard<std::mutex> server_lock(Serv::mtx);
+    cout << "entered cleanup\n";
     lock_guard<std::mutex> room_lock(Room::rooms_mutex);
+    cout << "passed locks\n";
     for(int i = 0; i < Player::max_players; ++i)
-        Player::players[i].mtx.lock();
+        if(pfds[i].fd != -1) disconnect_client(i);
+    lock_guard<std::mutex> server_lock(Serv::mtx);
+
     shutdown(server_fd, SHUT_RDWR);
     close(server_fd);
-
-    for(int i = Player::max_players; i >= 0; i--) {
-        Player::players[i].make_free();
-    }
-    for(int i = Player::max_players; i >= 0; i--){
-        if (pfds[i].fd == -1) continue;
-        shutdown(pfds[i].fd, SHUT_RDWR);
-        close(pfds[i].fd);
-    }
-
-        // for(int i = 0; i < Player::max_players; i++){
-    //     if(Player::players[i].fd != -1) {        
-    //         shutdown(Player::players[i].fd, SHUT_RDWR);
-    //         close(Player::players[i].fd);
-    //     }
-    // }
-    for(int i = 0; i < Player::max_players; ++i)
-        Player::players[i].mtx.unlock();
-
+    cout << "server cleaned\n";
 }
 
 
 
 void Serv::monitor(){
-    while (true) {
+    while (!stop_flag_serv) {
         unique_lock<mutex> lock(mtx);
         cv.wait(lock, [this] { return !events.empty() || stop; });
 
@@ -290,16 +296,28 @@ void Serv::monitor(){
                         // events type:= 0: detailed, 1: general
             string event = events.front();
             cout << "detected event: " << event << endl;
-            if(event[0] == '0'){ // detailed room info update
+
+            // leave room exception
+            if(event[0] == '2'){
                 binary_lobby = Room::get_binary_general_room_info();
                 send_to_lobby_members(binary_lobby);
+                binary_lobby = Room::rooms[stoi(event.substr(1))].get_binary_room_info();
+                send_to_room_members(stoi(event.substr(1)), binary_lobby);
+                
 
             }
-            binary_lobby = Room::rooms[stoi(event.substr(1))].get_binary_room_info();
+            else{
 
-            send_to_room_members(stoi(event.substr(1)), binary_lobby);      
+                if(event[0] == '0'){ // detailed room info update
+                    binary_lobby = Room::get_binary_general_room_info();
+                    send_to_lobby_members(binary_lobby);
 
+                }
+                binary_lobby = Room::rooms[stoi(event.substr(1))].get_binary_room_info();
 
+                send_to_room_members(stoi(event.substr(1)), binary_lobby);      
+
+            }
            
             events.pop();
         }
@@ -308,6 +326,7 @@ void Serv::monitor(){
             break;
         }
     }
+    cout << "server monitor stopped\n";
 
 }
 
@@ -329,7 +348,7 @@ void Serv::send_to_room_members(int room_id, char* msg, int len){
 void Serv::send_to_lobby_members(string msg){
     
     for(int i = 0; i < Player::max_players; i++){
-        if(Player::players[i].room == -1 && Player::players[i].fd != -1)
+        if(Player::players[i].room == -1 && pfds[i].fd == -1)
             send_to_player(i, msg);
     }
 
@@ -338,13 +357,14 @@ void Serv::send_to_lobby_members(string msg){
 void Serv::send_to_lobby_members(char* msg, int len){
     
     for(int i = 0; i < Player::max_players; i++){
-        if(Player::players[i].room == -1 && Player::players[i].fd != -1)
+        if(Player::players[i].room == -1 && pfds[i].fd == -1)
             send_to_player(i, msg, len);
     }
 
 };
 
 void Serv::send_to_player(int player_id, string msg){
+    if ((Player::players[player_id].nick == "" && msg[0] != 'N') ) return;
     lock_guard<std::mutex> lock(Player::players[player_id].mtx); // PLAYER MUTEX 
     send(pfds[player_id].fd, msg.c_str(), msg.size(), 0);
 }

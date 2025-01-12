@@ -181,6 +181,7 @@ void handle_events() {
                 std::string out = std::string("A ");
                 out.append(name_state.name);
                 out.push_back('\n');
+
                 tcp_socket.send(out.c_str(), out.size());
             }
             if(state == STATE_LOBBY && event.key.code == 73) lobby_state.room_selected = (lobby_state.room_selected - 1 + ROOM_COUNT) % ROOM_COUNT;
