@@ -186,11 +186,11 @@ bool Room::start_game() {
         msg = "H\n";
         Serv::serv.send_to_room_members(id, msg);
     }
-    else if (game_state == 1){
+    else if (game_state == 2){
         msg = "I\n";
         Serv::serv.send_to_room_members(id, msg);
     }
-    else if (game_state == 2){
+    else if (game_state == 3){
         msg = "J\n";
         Serv::serv.send_to_room_members(id, msg);
     }
