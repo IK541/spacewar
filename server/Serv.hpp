@@ -8,7 +8,6 @@
 #include <condition_variable>
 #include <queue>
 #include <string>
-#include <atomic>
 
 
 #include "Room.hpp"
@@ -22,7 +21,7 @@ class Serv {
     int addrlen; // length of address
 
     public:
-    static std::atomic<bool> stop_flag_serv;
+    static bool work;
 
     pollfd pfds[Player::max_players + 1]{};
     bool free_pfds[Player::max_players]{};

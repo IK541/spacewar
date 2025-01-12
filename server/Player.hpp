@@ -17,6 +17,7 @@ public:
     int room;
     string nick;
     sockaddr_in address;
+    int fd;
     bool free;
     std::mutex mtx; // for msg
     std::queue<char> data;
@@ -29,7 +30,7 @@ public:
 
     Player();
 
-    void take(sockaddr_in _address);
+    void take(sockaddr_in _address, int _fd);
 
     void make_free();
 

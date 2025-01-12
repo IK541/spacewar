@@ -62,7 +62,7 @@ void Serv::serve(){
 
 
     std::cout << "Server is listening on port " << port << "...\n";
-    while (!stop_flag_serv) {
+    while (work) {
         int num_events = poll(pfds, MAX_CLIENTS + 1, -1);
         if (num_events < 0) {
             perror("Poll failed");
@@ -99,8 +99,7 @@ void Serv::serve(){
         }
     }
 
-    cout << "Server shutting down...\n";
-
+    close(server_fd);
     return;
 }
 
@@ -122,7 +121,7 @@ void Serv::handle_new_connection() {
             pfds[i].events = POLLIN;
             std::cout << "Client connected on slot " << i << "\n";
 
-            Player::players[i].take(player_address);
+            Player::players[i].take(player_address, client_fd);
             return;
         }
     }
@@ -237,17 +236,12 @@ void Serv::handle_client_input(int client_id) {
 
 void Serv::disconnect_client(int client_id) {
     lock_guard<std::mutex> lock(mtx);
-    if (Player::players[client_id].room != -1 && pfds[client_id].fd != -1) {
+    if (Player::players[client_id].room != -1)
         events.push("0" + std::to_string(Player::players[client_id].room));
     cv.notify_one();
 
-        if (shutdown(pfds[client_id].fd, SHUT_RDWR) == -1) {
-            if (errno == EBADF) 
-                cout << "socked has been down\n"; 
-}
+    if(pfds[client_id].fd > 0)
         close(pfds[client_id].fd);
-    
-        
     pfds[client_id].fd = -1;
     pfds[client_id].events = 0;
     free_pfds[client_id] = false;
@@ -260,7 +254,6 @@ void Serv::disconnect_client(int client_id) {
     }
     Player::players[client_id].make_free();
     std::cout << "Client " << client_id << " has been disconnected.\n";
-    }
 }
 
 void Serv::handle_client_output(int client_id) {
@@ -271,22 +264,38 @@ void Serv::handle_client_output(int client_id) {
 
 
 void Serv::cleanup(){
-    cout << "entered cleanup\n";
-    lock_guard<std::mutex> room_lock(Room::rooms_mutex);
-    cout << "passed locks\n";
-    for(int i = 0; i < Player::max_players; ++i)
-        if(pfds[i].fd != -1) disconnect_client(i);
-    lock_guard<std::mutex> server_lock(Serv::mtx);
 
+    lock_guard<std::mutex> server_lock(Serv::mtx);
+    lock_guard<std::mutex> room_lock(Room::rooms_mutex);
+    for(int i = 0; i < Player::max_players; ++i)
+        Player::players[i].mtx.lock();
     shutdown(server_fd, SHUT_RDWR);
     close(server_fd);
-    cout << "server cleaned\n";
+
+    for(int i = Player::max_players - 1; i >= 0; i--) {
+        Player::players[i].make_free();
+    }
+    for(int i = Player::max_players - 1; i >= 0; i--){
+        if (pfds[i].fd == -1) continue;
+        shutdown(pfds[i].fd, SHUT_RDWR);
+        close(pfds[i].fd);
+    }
+
+        // for(int i = 0; i < Player::max_players; i++){
+    //     if(Player::players[i].fd != -1) {        
+    //         shutdown(Player::players[i].fd, SHUT_RDWR);
+    //         close(Player::players[i].fd);
+    //     }
+    // }
+    for(int i = 0; i < Player::max_players; ++i)
+        Player::players[i].mtx.unlock();
+
 }
 
 
 
 void Serv::monitor(){
-    while (!stop_flag_serv) {
+    while (true) {
         unique_lock<mutex> lock(mtx);
         cv.wait(lock, [this] { return !events.empty() || stop; });
 
@@ -326,7 +335,6 @@ void Serv::monitor(){
             break;
         }
     }
-    cout << "server monitor stopped\n";
 
 }
 
@@ -348,7 +356,7 @@ void Serv::send_to_room_members(int room_id, char* msg, int len){
 void Serv::send_to_lobby_members(string msg){
     
     for(int i = 0; i < Player::max_players; i++){
-        if(Player::players[i].room == -1 && pfds[i].fd == -1)
+        if(Player::players[i].room == -1 && Player::players[i].fd != -1)
             send_to_player(i, msg);
     }
 
@@ -357,7 +365,7 @@ void Serv::send_to_lobby_members(string msg){
 void Serv::send_to_lobby_members(char* msg, int len){
     
     for(int i = 0; i < Player::max_players; i++){
-        if(Player::players[i].room == -1 && pfds[i].fd == -1)
+        if(Player::players[i].room == -1 && Player::players[i].fd != -1)
             send_to_player(i, msg, len);
     }
 

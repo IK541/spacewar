@@ -4,6 +4,11 @@
 
 Player::Player(){
     address = {};
+    if(fd > 0) {
+        shutdown(fd, SHUT_RDWR);
+        close(fd);
+    }
+    fd = -1;
     ready = false;
     team = 0;
     nick = ""; //"free player";
@@ -11,8 +16,9 @@ Player::Player(){
     free = true;
 }
 
-void Player::take(sockaddr_in _address){
+void Player::take(sockaddr_in _address, int _fd){
     address = _address;
+    fd = _fd;
     ready = false;
     team = 0;
     nick = "";
@@ -24,6 +30,7 @@ void Player::take(sockaddr_in _address){
 
 void Player::make_free(){
     address = {};
+    fd = -1;
     ready = false;
     team = 0;
     nick = "";
@@ -53,7 +60,6 @@ bool Player::set_nick(string _nick){
         if(Player::players[i].nick == _nick) return 0;
 
     nick = _nick;
-
     return 1;
 }
 

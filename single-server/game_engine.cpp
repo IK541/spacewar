@@ -331,7 +331,7 @@ void GameEngine::set_ship(int ship_id) {
     if(BLUE_TEAM_BEGIN <= ship_id && ship_id < RED_TEAM_BEGIN) {
         this->blue.players[ship_id-BLUE_TEAM_BEGIN].ship->player = this->blue.players+ship_id-BLUE_TEAM_BEGIN;
     } else if(RED_TEAM_BEGIN <= ship_id && ship_id < BLUE_BULLETS_BEGIN) {
-        this->red.players[ship_id-RED_TEAM_BEGIN].ship->player = this->blue.players+ship_id-RED_TEAM_BEGIN;
+        this->red.players[ship_id-RED_TEAM_BEGIN].ship->player = this->red.players+ship_id-RED_TEAM_BEGIN;
     }
 }
 

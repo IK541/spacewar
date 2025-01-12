@@ -5,7 +5,6 @@
 #include <thread>
 #include <mutex>
 #include <queue>
-#include <string>
 
 #include "game_in.hpp"
 #include "game_out.hpp"
@@ -14,9 +13,8 @@
 
 #define WINDOW_SIZE 800
 
-#define SERVER_ADDR "127.0.0.1"
 #define SERVER_PORT 56789
-#define CLIENT_PORT 9001
+#define CLIENT_PORT 12340
 #define BIND_ATTEMPTS 20
 
 #define TEST_SIZE 1.f
@@ -49,6 +47,7 @@ sf::TcpSocket tcp_socket;
 sf::UdpSocket udp_socket;
 
 int port;
+std::string addr;
 
 // functions
 void resize(sf::Event* event, sf::Vector2f* window_size);
@@ -59,9 +58,9 @@ void handle_events();
 
 int main(int argc, char** argv) {
     if(argc < 2) {
-        printf("address required\n");
+        printf("server adress required");
         exit(-1);
-    }
+    } addr = argv[1];
 
     // Window
     window.setFramerateLimit(FPS);
@@ -86,7 +85,7 @@ int main(int argc, char** argv) {
     } port = udp_socket.getLocalPort();
     std::thread udp_recv_thread(udp_receiver);
     udp_recv_thread.detach();
-    if(tcp_socket.connect(sf::IpAddress(argv[1]), SERVER_PORT)) {
+    if(tcp_socket.connect(sf::IpAddress(addr), SERVER_PORT)) {
         printf("connection error\n"); return -1;
     }
     std::thread tcp_recv_thread(tcp_receiver);
@@ -106,6 +105,7 @@ int main(int argc, char** argv) {
     room_state.red = std::vector<PlayerInfo>();
 
     while (window.isOpen()) {
+        // printf("%d\n", state);
 
         // init phase
         handle_events();
@@ -154,7 +154,7 @@ int main(int argc, char** argv) {
         UserInput user_input = input_collector.collect();
         GameIn out_data = input_translator.translate(user_input);
         uint8_t* bytes = UdpOutputTranslator(out_data);
-        udp_socket.send(bytes, 9, sf::IpAddress(SERVER_ADDR), SERVER_PORT+room_state.id+1);
+        udp_socket.send(bytes, 9, sf::IpAddress(addr), SERVER_PORT+room_state.id+1);
         delete [] bytes;
         break;
         
@@ -254,6 +254,7 @@ void tcp_receiver() {
                 name_state.failed = true;
             }
             if(opcode == 'G') {
+                // TODO: this serverside
                 for(PlayerInfo player: room_state.blue) player.ready = false;
                 for(PlayerInfo player: room_state.red) player.ready = false;
                 game_state.reset();

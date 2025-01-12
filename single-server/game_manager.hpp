@@ -8,7 +8,7 @@
 
 // using namespace Gamespace;
 
-#define SERVER_PORT 8080
+#define SERVER_PORT 56789
 
 #define BUFFER_SIZE 4096
 

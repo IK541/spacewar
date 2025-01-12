@@ -343,7 +343,7 @@ string Room::switch_teams(int _id){
 
 void Room::monitor(){
     std::cout << "monitoring room " << id << std::endl;
-    while (!stop_flag_room) {
+    while (true) {
         unique_lock<mutex> lock(game_mtx);
         cv.wait(lock, [this] { return !events.empty() || stop; });
 
@@ -360,6 +360,4 @@ void Room::monitor(){
             break;
         }
     }
-    cout << "room monitor stopped\n";
-
 }
