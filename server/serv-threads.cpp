@@ -113,7 +113,7 @@ void monitor_changes(){
 
 
 
-int main(int argc, char* argv[]){
+int main(){
     
 
 
