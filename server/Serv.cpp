@@ -163,7 +163,7 @@ void Serv::handle_client_input(int client_id) {
         try {
         opcode = Player::players[client_id].data.front();
         Player::players[client_id].data.pop();
-        if(opcode == 'E') { // change teams
+        if(opcode == 'E') {
             {
                 lock_guard<std::mutex> lock(mtx);
                 std::cout << "Client " << client_id << " sent a 'E'-type message: switch team.\n";
@@ -180,8 +180,9 @@ void Serv::handle_client_input(int client_id) {
             events.push("1" + std::to_string(Player::players[client_id].room));// FAILS HERE
             cv.notify_one();
             }
+
         }
-        if(opcode == 'D') { // join room
+        if(opcode == 'D') {
             std::string room_str;
             Player::players[client_id].data.pop();
             while(Player::players[client_id].data.size()) {
