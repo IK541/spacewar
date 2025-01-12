@@ -6,6 +6,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <queue>
+#include "../single-server/game_manager.hpp"
 
 
 
@@ -29,7 +30,7 @@ public:
     std::queue<std::string> events;
     bool stop = false;
     static bool work;
-
+    GameManager gm;
 
     Room();
 

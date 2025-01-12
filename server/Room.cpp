@@ -16,13 +16,12 @@ using namespace std;
 
 
 
-Room::Room() {
+Room::Room() : gm(free_room_id + 1) {
     id = free_room_id++;
     playing = false;
     free_slots = max_players;
     teams_player_number[0] = 0;
     teams_player_number[1] = 0;
-
 }
 
 // will be changed to get room info
@@ -186,6 +185,11 @@ bool Room::start_game() {
 
     Serv::serv.send_to_lobby_members(binary_lobby);
     int game_state = gm.run_game(p);
+
+    msg = Room::rooms[id].get_binary_room_info();
+
+    Serv::serv.send_to_room_members(id, msg);
+
     if (game_state == DRAW){
         msg = "H\n";
         Serv::serv.send_to_room_members(id, msg);
@@ -204,9 +208,7 @@ bool Room::start_game() {
 
     Serv::serv.send_to_lobby_members(msg);
 
-    msg = Room::rooms[id].get_binary_room_info();
-
-    Serv::serv.send_to_room_members(id, msg);
+    
 
     printf("Game has ended in room %i\n", id);
 

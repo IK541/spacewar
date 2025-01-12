@@ -13,7 +13,6 @@
 using namespace std;
 
 #define PORT 56789
-#define BUFFER_SIZE 1024
 
 
 
