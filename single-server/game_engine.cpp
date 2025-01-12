@@ -297,7 +297,7 @@ int GameEngine::update_physics(double dt) {
 int GameEngine::get_winner() {
     return !this->red.base.hp ? BLUE_WIN :
         !this->blue.base.hp ? RED_WIN :
-        !this->timestamp ? DRAW : NO_WIN;
+        this->timestamp > DRAW_TIME ? DRAW : NO_WIN;
 }
 
 void GameEngine::update_input(int ship_id, GameIn input) {

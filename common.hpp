@@ -5,6 +5,8 @@
 
 #define FPS 60
 
+#define DRAW_TIME 36000
+
 #define INNER_RADIUS 6
 #define BASE_ZONE_RADIUS 2
 #define BASE_RADIUS 1
