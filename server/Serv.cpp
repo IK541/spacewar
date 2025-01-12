@@ -169,19 +169,18 @@ void Serv::handle_client_input(int client_id) {
                 std::cout << "Client " << client_id << " sent a 'E'-type message: switch team.\n";
                 msg = Room::rooms[Player::players[client_id].room].switch_teams(client_id);
                 if(msg[0] == 'Y') events.push("0" + std::to_string(Player::players[client_id].room));
-                send_to_player(client_id, msg);
                 cv.notify_one();
             }
         }
-        if(opcode == 'F') {
+        if(opcode == 'F') { // change state
             {
             lock_guard<std::mutex> lock(mtx);
             std::cout << "Client " << client_id << " sent a 'F'-type message: change ready state.\n";
             msg = Player::players[client_id].change_ready_state();
-            if(msg[0] == 'Y') events.push("1" + std::to_string(Player::players[client_id].room));// FAILS HERE
-            else send_to_player(client_id, "N");
+            events.push("1" + std::to_string(Player::players[client_id].room));// FAILS HERE
             cv.notify_one();
             }
+
         }
         if(opcode == 'D') {
             std::string room_str;
@@ -195,8 +194,6 @@ void Serv::handle_client_input(int client_id) {
                 std::cout << "Client " << client_id << " sent a 'D'-type message: enter room.\n";
                     msg = Room::rooms[room].join_room(client_id);
                     if(msg[0] == 'Y') events.push("0" + std::to_string(room));
-
-                send_to_player(client_id, msg);
                 cv.notify_one();
             }
         }
@@ -212,11 +209,9 @@ void Serv::handle_client_input(int client_id) {
             // receive nick from player
             lock_guard<std::mutex> lock(mtx);
             if(Player::players[client_id].set_nick(name)){
-                vector<char> binary_lobby = Room::get_binary_general_room_info();
-                char bf[13];
-                for(int i = 0; i <= 13; i++) bf[i] = binary_lobby[i];
-                send_to_player(client_id, bf, 13);
-            } else send_to_player(client_id, "N");
+                string binary_lobby = Room::get_binary_general_room_info();
+                send_to_player(client_id, binary_lobby);
+            } else send_to_player(client_id, "N\n");
             }
         }
         } catch(...) { printf("recv exception\n"); }
@@ -291,28 +286,21 @@ void Serv::monitor(){
 
         while (!events.empty()) {
             string msg = "";
-            vector<char> binary_lobby;
+            string binary_lobby;
                         // events type:= 0: detailed, 1: general
             string event = events.front();
             cout << "detected event: " << event << endl;
             if(event[0] == '0'){ // detailed room info update
-                binary_lobby = Room::rooms[stoi(event.substr(1))].get_room_info();
-                int len = binary_lobby.size();
-                char msg_bin_room[len];
-                for(unsigned int i = 0; i < binary_lobby.size(); i++){
-                    msg_bin_room[i] = binary_lobby[i];
-                }
-                send_to_room_members(stoi(event.substr(1)), msg_bin_room, binary_lobby.size());
+                binary_lobby = Room::get_binary_general_room_info();
+                send_to_lobby_members(binary_lobby);
+
             }
+            binary_lobby = Room::rooms[stoi(event.substr(1))].get_binary_room_info();
+
+            send_to_room_members(stoi(event.substr(1)), binary_lobby);      
 
 
-            char msg_bin[13];
-            binary_lobby = Room::get_binary_general_room_info();
-            for(int i = 0; i < 14; i++){
-                msg_bin[i] = binary_lobby[i];
-            }
-            send_to_lobby_members(msg_bin, 13);
-
+           
             events.pop();
         }
 

@@ -75,7 +75,7 @@ string Player::change_ready_state(){
 
     if(ready) ready = 0;
     else ready = 1;
-    printf("ready state changed to %i\n", ready);
+    printf("Y\nready state changed to %i\n", ready);
 
     if (Room::rooms[room].get_player_count() == Room::rooms[room].get_ready_players()
     &&  Room::rooms[room].teams_player_number[0] > 0
