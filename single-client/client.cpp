@@ -14,7 +14,7 @@
 #define WINDOW_SIZE 800
 
 #define SERVER_ADDR "127.0.0.1"
-#define SERVER_PORT 10000
+#define SERVER_PORT 8080
 #define CLIENT_PORT 9001
 
 #define TEST_SIZE 1.f
@@ -84,7 +84,7 @@ int main() {
     // State init
     state = STATE_NAME;
     name_state.name = std::string();
-    name_state.failed = true;
+    name_state.failed = false;
     lobby_state.room_selected = 1;
     lobby_state.rooms = std::vector<RoomInfo>();
     lobby_state.rooms.push_back(RoomInfo{0,0,2,2});
@@ -183,7 +183,7 @@ void handle_events() {
                 out.append(name_state.name);
                 tcp_socket.send(out.c_str(), out.size());
             }
-            if(state == STATE_LOBBY && event.key.code == 73) lobby_state.room_selected = (lobby_state.room_selected - 1) % ROOM_COUNT;
+            if(state == STATE_LOBBY && event.key.code == 73) lobby_state.room_selected = (lobby_state.room_selected - 1 + ROOM_COUNT) % ROOM_COUNT;
             if(state == STATE_LOBBY && event.key.code == 74) lobby_state.room_selected = (lobby_state.room_selected + 1) % ROOM_COUNT;
             if(state == STATE_LOBBY && event.key.code == 58) {
                 std::string out = std::string("D");
@@ -269,6 +269,7 @@ void tcp_receiver() {
                 opcode = '-';
             }
             if(opcode == 'L') { if (data.size() >= bytes_expected) {
+                state = STATE_LOBBY;
                 for(int i = 0; i < ROOM_COUNT; ++i) {
                     lobby_state.rooms[i].id = data.front(); data.pop();
                     lobby_state.rooms[i].is_game_running = data.front(); data.pop();
