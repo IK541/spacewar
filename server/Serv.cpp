@@ -163,8 +163,10 @@ void Serv::handle_client_input(int client_id) {
             Player::players[client_id].data.pop();
         }
         if(opcode == 'A') {
-            if(Player::players[client_id].data.size()) {
+            if(Player::players[client_id].data.size() >= 2) {
                 bytes_expected = (int) Player::players[client_id].data.front();
+                Player::players[client_id].data.pop();
+                bytes_expected = 10 * bytes_expected + (int) Player::players[client_id].data.front();
                 Player::players[client_id].data.pop();
                 opcode = '>';
             } else break;
@@ -200,7 +202,7 @@ void Serv::handle_client_input(int client_id) {
         }
         if(opcode == 'D') {
             if(Player::players[client_id].data.size()) {
-                int room = (int) Player::players[client_id].data.front();
+                int room = (int) Player::players[client_id].data.front() - '0';
                 Player::players[client_id].data.pop();
                 {
                 lock_guard<std::mutex> lock(mtx);
