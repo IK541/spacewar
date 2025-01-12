@@ -98,6 +98,7 @@ void game_recv(int sfd, Players* players) {
 }
 
 int GameManager::run_game(std::vector<GameManagerInput> players) {
+    printf("Running game\n");
     GameEngine game_engine;
     this->players->init(players);
     for(GameManagerInput player: players)

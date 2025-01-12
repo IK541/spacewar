@@ -209,11 +209,16 @@ void Serv::handle_client_input(int client_id) {
         }
         if(opcode == 'A') {
             std::string name;
+            std::string port_str;
             Player::players[client_id].data.pop();
-            while(Player::players[client_id].data.size()) {
+            while(Player::players[client_id].data.size() && Player::players[client_id].data.front() != ' ') {
                 name.push_back(Player::players[client_id].data.front());
                 Player::players[client_id].data.pop();
-            }
+            } Player::players[client_id].data.pop();
+            while(Player::players[client_id].data.size() && Player::players[client_id].data.front() != ' ') {
+                port_str.push_back(Player::players[client_id].data.front());
+                Player::players[client_id].data.pop();
+            } port = stoi(port_str);
             {
             std::cout << "Client " << client_id << " sent an 'A'-type message: nick.\n";
             // receive nick from player

@@ -47,6 +47,8 @@ GameState game_state;
 sf::TcpSocket tcp_socket;
 sf::UdpSocket udp_socket;
 
+int port;
+
 // functions
 void resize(sf::Event* event, sf::Vector2f* window_size);
 void set_view(sf::RenderWindow* window, sf::Vector2f window_size, sf::Vector2f center);
@@ -75,7 +77,7 @@ int main() {
         }
     } if(!bind_success) {
         printf("bind error\n"); return -1;
-    }
+    } port = udp_socket.getLocalPort();
     std::thread udp_recv_thread(udp_receiver);
     udp_recv_thread.detach();
     if(tcp_socket.connect(sf::IpAddress(SERVER_ADDR), SERVER_PORT)) {
@@ -152,7 +154,7 @@ int main() {
         UserInput user_input = input_collector.collect();
         GameIn out_data = input_translator.translate(user_input);
         uint8_t* bytes = UdpOutputTranslator(out_data);
-        udp_socket.send(bytes, 9, sf::IpAddress(SERVER_ADDR), SERVER_PORT+room_state.id);
+        udp_socket.send(bytes, 9, sf::IpAddress(SERVER_ADDR), SERVER_PORT+room_state.id+1);
         delete [] bytes;
         break;
         
@@ -187,6 +189,8 @@ void handle_events() {
             if(state == STATE_NAME && event.key.code == 58) {
                 std::string out = std::string("A ");
                 out.append(name_state.name);
+                out.push_back(' ');
+                out.append(std::to_string(port));
                 out.push_back('\n');
                 tcp_socket.send(out.c_str(), out.size());
             }
