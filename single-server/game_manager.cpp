@@ -93,6 +93,7 @@ void game_recv(int sfd, Players* players) {
         if(size < 9) continue;
         GameIn input = UdpInputTranslator((uint8_t*)buffer);
         players->set(addr, input);
+        printf("%d %f %d %d\n", input.timestamp, input.angle, input.engine_on, input.shoot);
     }
 }
 

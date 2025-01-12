@@ -27,7 +27,7 @@ struct LobbyState {
 };
 
 struct RoomState {
-    // RoomInfo info;
+    uint8_t id;
     std::vector<PlayerInfo> blue;
     std::vector<PlayerInfo> red;
 };

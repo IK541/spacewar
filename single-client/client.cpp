@@ -96,7 +96,7 @@ int main() {
     room_state.red.push_back(PlayerInfo{true,std::string("JK")});
 
     while (window.isOpen()) {
-        printf("%d\n", state);
+        // printf("%d\n", state);
 
         // init phase
         handle_events();
@@ -145,7 +145,7 @@ int main() {
         UserInput user_input = input_collector.collect();
         GameIn out_data = input_translator.translate(user_input);
         uint8_t* bytes = UdpOutputTranslator(out_data);
-        udp_socket.send(bytes, 9, sf::IpAddress(SERVER_ADDR), SERVER_PORT);
+        udp_socket.send(bytes, 9, sf::IpAddress(SERVER_ADDR), SERVER_PORT+room_state.id);
         delete [] bytes;
         break;
         
@@ -178,28 +178,30 @@ void handle_events() {
             }
             if(state == STATE_NAME && event.key.code == 59 && name_state.name.size()) name_state.name.pop_back();
             if(state == STATE_NAME && event.key.code == 58) {
-                std::string out = std::string("A");
-                out.append(name_state.name.size()); // msg len                out.append(name_state.name);
+                std::string out = std::string("A ");
+                out.append(name_state.name);
+                out.push_back('\n');
+
                 tcp_socket.send(out.c_str(), out.size());
             }
             if(state == STATE_LOBBY && event.key.code == 73) lobby_state.room_selected = (lobby_state.room_selected - 1 + ROOM_COUNT) % ROOM_COUNT;
             if(state == STATE_LOBBY && event.key.code == 74) lobby_state.room_selected = (lobby_state.room_selected + 1) % ROOM_COUNT;
             if(state == STATE_LOBBY && event.key.code == 58) {
-                std::string out = std::string("D");
-                out.push_back(lobby_state.room_selected);
+                std::string out = std::string("D ");
+                out.append(std::to_string(lobby_state.room_selected));
+                out.push_back('\n');
                 tcp_socket.send(out.c_str(), out.size());
             }
             if(state == STATE_ROOM && event.key.code == 57) {
-                std::string out = std::string("E");
+                std::string out = std::string("E\n");
                 tcp_socket.send(out.c_str(), out.size());
             }
             if(state == STATE_ROOM && event.key.code == 58) {
-                std::string out = std::string("F");
+                std::string out = std::string("F\n");
                 tcp_socket.send(out.c_str(), out.size());
             }
             if(state == STATE_ROOM && event.key.code == 59) {
-                std::string out = std::string("D");
-                out.push_back(-1);
+                std::string out = std::string("D -1\n");
                 tcp_socket.send(out.c_str(), out.size());
             }
             if(state == STATE_BLUE || state == STATE_RED) {
@@ -225,87 +227,92 @@ void tcp_receiver() {
     std::size_t size = 0;
     uint8_t buffer[BUFFER_SIZE];
     std::queue<char> data;
+    std::string item;
 
     char opcode = '-';
     unsigned int bytes_expected = 0;
     
     while(1) {
         tcp_socket.receive(buffer, BUFFER_SIZE, size);
-        for(unsigned int i = 0; i < size; ++i) data.push(buffer[i]);
-        while(data.size()) {
-            if(opcode == '-' && data.size()) {
-                opcode = data.front();
-                data.pop();
-                if(opcode == 'L') bytes_expected = 4*ROOM_COUNT;
-            }
-            if(opcode == 'R') { if(data.size()) {
-                bytes_expected = (int) data.front();
-                opcode = '>';
-                data.pop();
-            } else break; }
+        for(unsigned int i = 0; i < size; ++i) {
+            if(buffer[i] != '\n') {
+                data.push(buffer[i]);
+                continue;
+            } if(!data.size()) continue;
+            try {
+            opcode = data.front(); data.pop();
             std::lock_guard<std::mutex> lock(mtx);
             if(opcode == 'N') {
                 name_state.failed = true;
-                opcode = '-';
             }
             if(opcode == 'G') {
+                // TODO: this serverside
                 for(PlayerInfo player: room_state.blue) player.ready = false;
                 for(PlayerInfo player: room_state.red) player.ready = false;
                 game_state.reset();
                 state = STATE_GAME;
-                opcode = '-';
             }
             if(opcode == 'H') {
                 state = STATE_ROOM;
-                opcode = '-';
             }
             if(opcode == 'I') {
                 state = STATE_BLUE;
-                opcode = '-';
             }
             if(opcode == 'J') {
                 state = STATE_RED;
-                opcode = '-';
             }
-            if(opcode == 'L') { if (data.size() >= bytes_expected) {
-                state = STATE_LOBBY;
+            if(opcode == 'L') {
+                data.pop();
+                std::vector<int> vals;
+                std::vector<RoomInfo> new_info;
+                while(data.size()) {
+                    if(data.front() == ' ') {
+                        vals.push_back(stoi(item));
+                        item.clear();
+                    } else item.push_back(data.front());
+                    data.pop();
+                } vals.push_back(stoi(item));
+                if(vals.size() != 4 * ROOM_COUNT) goto end;
                 for(int i = 0; i < ROOM_COUNT; ++i) {
-                    lobby_state.rooms[i].id = data.front(); data.pop();
-                    lobby_state.rooms[i].is_game_running = data.front(); data.pop();
-                    lobby_state.rooms[i].blue_count = data.front(); data.pop();
-                    lobby_state.rooms[i].red_count = data.front(); data.pop();
-                }
-                opcode = '-';
-                bytes_expected = 0;
-            } else break; }
-            if(opcode == '>') { if(data.size() >= bytes_expected) {
+                    if(vals[4*i] < 0 || vals[4*i] >= ROOM_COUNT) goto end;
+                    if(vals[4*i+1] < 0 || vals[4*i+1] >= 2) goto end;
+                    if(vals[4*i+2] < 0 || vals[4*i+2] >= PLAYERS_PER_TEAM) goto end;
+                    if(vals[4*i+3] < 0 || vals[4*i+3] >= PLAYERS_PER_TEAM) goto end;
+                    new_info.push_back(RoomInfo{(uint8_t)vals[4*i],(bool)vals[4*i+1],(uint8_t)vals[4*i+2],(uint8_t)vals[4*i+3]});
+                } lobby_state.rooms = new_info;
+                state = STATE_LOBBY;
+            }
+            if(opcode == 'R') {
+                data.pop();
+                std::vector<std::string> vals;
+                RoomState new_state;
+                while(data.size()) {
+                    if(data.front() == ' ') {
+                        vals.push_back(item);
+                        item.clear();
+                    } else item.push_back(data.front());
+                    data.pop();
+                } vals.push_back(item);
+                for(std::string val: vals) printf("%s\n", val.c_str());
+                if(vals.size() < 4) goto end;
+                uint8_t room_id = (uint8_t)stoi(vals[0]);
+                uint8_t blue = (uint8_t)stoi(vals[2]);
+                uint8_t red = (uint8_t)stoi(vals[3]);
+                printf("blue: %d\n", blue & 0xff);
+                printf("red: %d\n", red & 0xff);
+                if(vals.size() != 4U + 2U * (blue + red)) goto end;
                 room_state.blue.clear(); room_state.red.clear();
-                data.pop(); data.pop();
-                int blue = data.front(); data.pop();
-                int red = data.front(); data.pop();
-                for(int i = 0; i < blue; ++i) {
-                    bool ready = data.front(); data.pop();
-                    int len = data.front(); data.pop();
-                    std::string name;
-                    for(int j = 0; j < len; ++j) {
-                        name.push_back(data.front());
-                        data.pop();
-                    }
-                    room_state.blue.push_back(PlayerInfo{ready,name});
+                for(int i = 4; i < 4 + 2 * blue; i += 2) {
+                    room_state.blue.push_back(PlayerInfo{(bool)stoi(vals[i]),vals[i+1]});
                 }
-                for(int i = 0; i < red; ++i) {
-                    bool ready = data.front(); data.pop();
-                    int len = data.front(); data.pop();
-                    std::string name;
-                    for(int j = 0; j < len; ++j) {
-                        name.push_back(data.front());
-                        data.pop();
-                    }
-                    room_state.red.push_back(PlayerInfo{ready,name});
-                }
-                opcode = '-';
-                bytes_expected = 0;
-            } else break; }
+                for(int i = 4 + 2 * blue; i < 4 + 2 * (blue + red); i += 2) {
+                    room_state.red.push_back(PlayerInfo{(bool)stoi(vals[i]),vals[i+1]});
+                } room_state.id = room_id; state = STATE_ROOM;
+            }
+            } catch(...) { printf("recv exception\n"); }
+            end:
+            item.clear();
+            data = {};
         }
     }
 }
