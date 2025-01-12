@@ -1,36 +1,8 @@
-#include "in.hpp"
+#include "game_in.hpp"
 
 #include <cstring>
 
-Shape::Shape(sf::Vector2f pos, float scale, sf::Color color):
-pos(pos),scale(scale),color(color){}
-
-Triangle::Triangle(sf::Vector2f pos, float scale, sf::Color color, float angle):
-Shape(pos,scale,color),angle(angle){}
-
-Circle::Circle(sf::Vector2f pos, float scale, sf::Color color):
-Shape(pos,scale,color){}
-
-void Circle::draw(sf::RenderWindow* window) {
-    sf::CircleShape shape(this->scale);
-    shape.setOrigin(this->scale, this->scale);
-    shape.move(this->pos);
-    shape.setFillColor(this->color);
-    window->draw(shape);
-}
-
-void Triangle::draw(sf::RenderWindow* window) {
-    sf::CircleShape shape(this->scale,3);
-    shape.setOrigin(this->scale,this->scale);
-    shape.move(this->pos);
-    shape.scale(1.6,2.4);
-    shape.move(0.f,-0.25f*this->scale);
-    shape.rotate(180.0/M_PI*this->angle+90.0);
-    shape.setFillColor(this->color);
-    window->draw(shape);
-}
-
-void Drawer::add(SpaceObject* object) {
+void GameDrawer::add(SpaceObject* object) {
     Shape* shape;
     uint8_t type = get_type(object->id);
     bool side = get_side(object->id);
@@ -53,8 +25,8 @@ void Drawer::add(SpaceObject* object) {
     this->shapes.push_back(shape);
 }
 
-void Drawer::add_all(DrawDataI* source) {
-    DrawData data = source->get_game_state();
+void GameDrawer::add_all(DrawDataI* source) {
+    DrawGameData data = source->get_game_state();
     for(SpaceObject* object: *data.objects) this->add(object);
     this->blue = data.blue; this->red = data.red;
     this->ammo = data.ammo; this->respawn = data.respawn;
@@ -62,12 +34,12 @@ void Drawer::add_all(DrawDataI* source) {
     delete data.objects;
 }
 
-void Drawer::clear() {
+void GameDrawer::clear() {
     for(Shape* shape: this->shapes) delete shape;
     this->shapes.clear();
 }
 
-void Drawer::draw(WindowData window) {
+void GameDrawer::draw(WindowData window) {
     this->draw_bases(window);
     this->draw_objects(window);
     this->draw_zones(window);
@@ -76,23 +48,23 @@ void Drawer::draw(WindowData window) {
     this->draw_respawn(window);
 }
 
-Drawer::~Drawer() { this->clear(); }
+GameDrawer::~GameDrawer() { this->clear(); }
 
-void Drawer::draw_objects(WindowData window) {
+void GameDrawer::draw_objects(WindowData window) {
     for(Shape* shape: this->shapes) shape->draw(window.window);
 }
 
-void Drawer::draw_zones(WindowData window) {
+void GameDrawer::draw_zones(WindowData window) {
     Circle blue_zone(sf::Vector2f(0,BASE_DIST),BASE_ZONE_RADIUS,sf::Color(0,0,127,63)); blue_zone.draw(window.window);
     Circle red_zone(sf::Vector2f(0,-BASE_DIST),BASE_ZONE_RADIUS,sf::Color(127,0,0,63)); red_zone.draw(window.window);
 }
 
-void Drawer::draw_bases(WindowData window) {
+void GameDrawer::draw_bases(WindowData window) {
     Circle blue_base(sf::Vector2f(0,BASE_DIST),BASE_RADIUS,sf::Color(0,0,127)); blue_base.draw(window.window);
     Circle red_base(sf::Vector2f(0,-BASE_DIST),BASE_RADIUS,sf::Color(127,0,0)); red_base.draw(window.window);
 }
 
-void Drawer::draw_hp(WindowData window) {
+void GameDrawer::draw_hp(WindowData window) {
     sf::Vector2f v = get_view_size(window.size);
 
     float blue_len = 2.f * this->blue / BASE_HP * v.x;
@@ -108,7 +80,7 @@ void Drawer::draw_hp(WindowData window) {
     window.window->draw(red_bar);
 }
 
-void Drawer::draw_ammo(WindowData window) {
+void GameDrawer::draw_ammo(WindowData window) {
     sf::Vector2f v = get_view_size(window.size);
     for(int i = 0; i < ammo; ++i) {
         sf::CircleShape ammo = sf::CircleShape(AMMO_RADIUS);
@@ -118,7 +90,7 @@ void Drawer::draw_ammo(WindowData window) {
     }
 }
 
-void Drawer::draw_respawn(WindowData window) {
+void GameDrawer::draw_respawn(WindowData window) {
     for(int i = 0; i < respawn; ++i) {
         sf::CircleShape respawn = sf::CircleShape(0.5f*RESPAWN_WIDTH);
         double angle = 2 * M_PI * ((double) i) / RESPAWN_TIME;
@@ -135,6 +107,15 @@ GameState::GameState():timestamp(0),ammo(0),respawn(0),center(sf::Vector2f(0.f,0
     memset(this->objects,0,TOTAL_ENTITIES*sizeof(SpaceObject));
 }
 
+void GameState::reset(){
+    this->timestamp = 0;
+    this->ammo = 0;
+    this->respawn = 0;
+    this->center = sf::Vector2f(0.f,0.f);
+    memset(this->objects_present,0,TOTAL_ENTITIES*sizeof(bool));
+    memset(this->objects,0,TOTAL_ENTITIES*sizeof(SpaceObject));
+}
+
 void GameState::get_space_objects(std::vector<SpaceObject*>* objects) {
     for(int i = 0; i < TOTAL_ENTITIES; ++i) {
         if(this->objects_present[i]) {
@@ -144,11 +125,11 @@ void GameState::get_space_objects(std::vector<SpaceObject*>* objects) {
     }
 }
 
-DrawData GameState::get_game_state() {
+DrawGameData GameState::get_game_state() {
     std::lock_guard<std::mutex> lock(this->mtx);
     std::vector<SpaceObject*>* objects = new std::vector<SpaceObject*>;
     this->get_space_objects(objects);
-    return DrawData {
+    return DrawGameData {
         objects,
         this->blue_hp,
         this->red_hp,
@@ -181,11 +162,6 @@ void GameState::set_game_state(GameOut out) {
             this->center.y = object->y;
         }
     }
-}
-
-bool GameState::is_game_running() {
-    // TODO - lobby & tcp
-    return true;
 }
 
 GameOut UdpInputTranslator(uint8_t* data, int size) {
