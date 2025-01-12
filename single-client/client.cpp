@@ -179,7 +179,8 @@ void handle_events() {
             if(state == STATE_NAME && event.key.code == 59 && name_state.name.size()) name_state.name.pop_back();
             if(state == STATE_NAME && event.key.code == 58) {
                 std::string out = std::string("A");
-                out.push_back(out.size()); // msg len
+                // out.push_back(name_state.name.size()); // msg len
+                out.append(std::to_string(name_state.name.size())); // msg len
                 out.append(name_state.name);
                 tcp_socket.send(out.c_str(), out.size());
             }
@@ -200,7 +201,7 @@ void handle_events() {
             }
             if(state == STATE_ROOM && event.key.code == 59) {
                 std::string out = std::string("D");
-                out.push_back(-1);
+                out.push_back('X');
                 tcp_socket.send(out.c_str(), out.size());
             }
             if(state == STATE_BLUE || state == STATE_RED) {
@@ -271,10 +272,10 @@ void tcp_receiver() {
             if(opcode == 'L') { if (data.size() >= bytes_expected) {
                 state = STATE_LOBBY;
                 for(int i = 0; i < ROOM_COUNT; ++i) {
-                    lobby_state.rooms[i].id = data.front(); data.pop();
-                    lobby_state.rooms[i].is_game_running = data.front(); data.pop();
-                    lobby_state.rooms[i].blue_count = data.front(); data.pop();
-                    lobby_state.rooms[i].red_count = data.front(); data.pop();
+                    lobby_state.rooms[i].id = data.front() - '0'; data.pop();
+                    lobby_state.rooms[i].is_game_running = data.front() - '0'; data.pop();
+                    lobby_state.rooms[i].blue_count = data.front() - '0'; data.pop();
+                    lobby_state.rooms[i].red_count = data.front() - '0'; data.pop();
                 }
                 opcode = '-';
                 bytes_expected = 0;
@@ -282,11 +283,12 @@ void tcp_receiver() {
             if(opcode == '>') { if(data.size() >= bytes_expected) {
                 room_state.blue.clear(); room_state.red.clear();
                 data.pop(); data.pop();
-                int blue = data.front(); data.pop();
-                int red = data.front(); data.pop();
+                int blue = data.front() - '0'; data.pop();
+                int red = data.front() - '0'; data.pop();
                 for(int i = 0; i < blue; ++i) {
                     bool ready = data.front(); data.pop();
-                    int len = data.front(); data.pop();
+                    int len = data.front() - '0'; data.pop();
+                    len = 10 * len + data.front() - '0'; data.pop();
                     std::string name;
                     for(int j = 0; j < len; ++j) {
                         name.push_back(data.front());
@@ -296,7 +298,8 @@ void tcp_receiver() {
                 }
                 for(int i = 0; i < red; ++i) {
                     bool ready = data.front(); data.pop();
-                    int len = data.front(); data.pop();
+                    int len = data.front() - '0'; data.pop();
+                    len = 10 * len + data.front() - '0'; data.pop();
                     std::string name;
                     for(int j = 0; j < len; ++j) {
                         name.push_back(data.front());
