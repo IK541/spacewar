@@ -98,7 +98,7 @@ int main(){
 
 
 
-    signal(SIGINT, signalHandler); // Handle Ctrl+C (SIGINT)
+    // signal(SIGINT, signalHandler); // Handle Ctrl+C (SIGINT)
 
     std::thread serveR(serveRooms);
     sleep(1);
