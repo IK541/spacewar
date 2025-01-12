@@ -6,6 +6,8 @@
 #include <mutex>
 #include <condition_variable>
 #include <queue>
+#include <atomic>
+
 
 
 
@@ -28,7 +30,7 @@ public:
     std::condition_variable cv;
     std::queue<std::string> events;
     bool stop = false;
-    static bool work;
+    static std::atomic<bool> stop_flag_room;
 
 
     Room();

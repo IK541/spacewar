@@ -3,6 +3,7 @@
 #include <time.h>
 #include <mutex>
 #include <sys/wait.h>
+#include <atomic>
 
 
 
@@ -21,25 +22,42 @@ using namespace std;
 
 std::mutex Room::rooms_mutex;
 std::mutex Serv::mtx;
-bool Serv::work = true;
-bool Room::work = true;
+atomic<bool> Serv::stop_flag_serv(false);
+atomic<bool> Room::stop_flag_room(false);
 
 int Room::free_room_id = 0;
 Room Room::rooms[Room::max_rooms];
 Player Player::players[Player::max_players];
 Serv Serv::serv(PORT);
 
+int sigint_counter = 0;
 
 void cleanup(){
-    Serv::work = false;
-    Room::work = false;
+    Serv::stop_flag_serv = false;
+    Room::stop_flag_room = false;
     Serv::serv.cleanup();
 }
 
 void signalHandler(int signum) {
+    if(sigint_counter >= 2 ){
+        
+    
 
     std::cout << "\nInterrupt signal (" << signum << ") received. Gracefully exiting...\n";
+    cout << "sigint_counter: " << sigint_counter++ << endl;
     cleanup();
+    cout << "exiting\n";
+    }
+    if (sigint_counter == 0){
+        cout << "are you sure you want to exit?\n";
+    }
+
+    if (sigint_counter == 1){
+        cout << "are you really sure you want to exit?\n";
+    }
+
+            sigint_counter++;
+
     exit(signum);
 }
 
@@ -83,7 +101,7 @@ void handleClients(){
 
 
     Serv::serv.serve();
-    sleep(1);
+    cout << "successfully joined serv";
 }
 
 void monitor_changes(){
@@ -101,21 +119,21 @@ int main(){
 
     signal(SIGINT, signalHandler); // Handle Ctrl+C (SIGINT)
 
+    
     std::thread serveR(serveRooms);
     sleep(1);
-
     std::thread serveC(handleClients);
     sleep(1);
-
     std::thread serveM(monitor_changes);
-    sleep(1);
-
     
-    
+    // serveR.join();
+    // serveC.join();
+    // serveM.join();
     serveR.join();
-    serveC.join();
+
     serveM.join();
 
+    serveC.join();
 
     return 0;
 }
