@@ -223,7 +223,7 @@ void Serv::handle_client_input(int client_id) {
             std::cout << "Client " << client_id << " sent an 'A'-type message: nick.\n";
             // receive nick from player
             lock_guard<std::mutex> lock(mtx);
-            if(Player::players[client_id].set_nick(name)){
+            if(Player::players[client_id].set_nick(name, port)){
                 string binary_lobby = Room::get_binary_general_room_info();
                 send_to_player(client_id, binary_lobby);
             } else send_to_player(client_id, "N\n");

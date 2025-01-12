@@ -63,6 +63,18 @@ bool Player::set_nick(string _nick){
     return 1;
 }
 
+bool Player::set_nick(string _nick, int port){
+
+    if (_nick.size() < 1 && _nick.size() >= 12) return 0;
+
+    for(int i = 0; i < Player::max_players; i++)
+        if(Player::players[i].nick == _nick) return 0;
+
+    nick = _nick;
+    address.sin_port = htons(port);
+    return 1;
+}
+
 
 string Player::get_player_info(){
     string msg = "";

@@ -34,7 +34,10 @@ public:
 
     void make_free();
 
-    bool set_nick(string);
+    bool set_nick(string); // depricated, now debug only
+
+    bool set_nick(string, int); 
+
 
     
     string change_ready_state();
