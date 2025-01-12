@@ -231,9 +231,9 @@ string Room::get_binary_general_room_info() {
     
     for(int i = 0; i < max_rooms; i++){
         info += to_string(rooms[i].id) + " ";
+        info += to_string(rooms[i].playing) + " ";
         info += to_string(rooms[i].teams_player_number[0]) + " ";
         info += to_string(rooms[i].teams_player_number[1]) + " ";
-        info += to_string(rooms[i].playing) + " ";
     }
 
     info[info.size()-1] = '\n';

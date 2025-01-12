@@ -257,10 +257,10 @@ void Serv::cleanup(){
     shutdown(server_fd, SHUT_RDWR);
     close(server_fd);
 
-    for(int i = Player::max_players; i >= 0; i--) {
+    for(int i = Player::max_players - 1; i >= 0; i--) {
         Player::players[i].make_free();
     }
-    for(int i = Player::max_players; i >= 0; i--){
+    for(int i = Player::max_players - 1; i >= 0; i--){
         if (pfds[i].fd == -1) continue;
         shutdown(pfds[i].fd, SHUT_RDWR);
         close(pfds[i].fd);
