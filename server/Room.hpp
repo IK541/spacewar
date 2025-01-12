@@ -42,6 +42,8 @@ public:
 
     string join_room(int id);
 
+    static string leave_room(int id);
+
     string switch_teams(int id);
 
 

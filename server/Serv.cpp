@@ -191,9 +191,14 @@ void Serv::handle_client_input(int client_id) {
             } int room = stoi(room_str);
             {
                 lock_guard<std::mutex> lock(mtx);
-                std::cout << "Client " << client_id << " sent a 'D'-type message: enter room.\n";
+                if (room >= 0){
+                    std::cout << "Client " << client_id << " sent a 'D'-type message: enter room.\n";
                     msg = Room::rooms[room].join_room(client_id);
-                    if(msg[0] == 'Y') events.push("0" + std::to_string(room));
+                }else{
+                    std::cout << "Client " << client_id << " sent a 'D'-type message: leave room.\n";
+                    msg = Room::leave_room(client_id);
+                }
+                if(msg[0] == 'Y') events.push("0" + std::to_string(room));
                 cv.notify_one();
             }
         }
@@ -290,7 +295,7 @@ void Serv::monitor(){
                         // events type:= 0: detailed, 1: general
             string event = events.front();
             cout << "detected event: " << event << endl;
-            if(event[0] == '0'){ // detailed room info update
+            if(event[0] == '0' && event[1] != '-'){ // detailed room info update
                 binary_lobby = Room::get_binary_general_room_info();
                 send_to_lobby_members(binary_lobby);
 

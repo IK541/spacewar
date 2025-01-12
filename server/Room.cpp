@@ -245,15 +245,7 @@ string Room::get_binary_general_room_info() {
 
 string Room::join_room(int _id){
     rooms_mutex.lock();
-    if(_id == -1){
-        Room::rooms[Player::players[_id].room].free_slots++;
-        Room::rooms[Player::players[_id].room].teams_player_number[Player::players[_id].team]--;
-        Player::players[_id].room = id;
-        free_slots--;
-        rooms_mutex.unlock();
-        return "Y\n";
-    }
-
+    
     if (free_slots == 0){
         rooms_mutex.unlock();
         return "N\n room full\n";
@@ -290,6 +282,19 @@ string Room::join_room(int _id){
     return "Y\n";
 }
 
+string Room::leave_room(int client_id){
+    rooms_mutex.lock();
+    if (Player::players[client_id].room == -1){
+        rooms_mutex.unlock();
+        return "N\n not in room\n";
+    }
+
+    Room::rooms[Player::players[client_id].room].free_slots++;
+    Room::rooms[Player::players[client_id].room].teams_player_number[Player::players[client_id].team]--;
+    Player::players[client_id].room = -1;
+    rooms_mutex.unlock();
+    return "Y\n";
+}
 
 string Room::switch_teams(int _id){
 
