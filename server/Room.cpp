@@ -198,13 +198,18 @@ bool Room::start_game() {
         msg = "J\n";
         Serv::serv.send_to_room_members(id, msg);
     }
+        playing = false;
 
     msg = Room::get_binary_general_room_info();
 
     Serv::serv.send_to_lobby_members(msg);
 
+    msg = Room::rooms[id].get_binary_room_info();
+
+    Serv::serv.send_to_room_members(id, msg);
+
     printf("Game has ended in room %i\n", id);
-    playing = false;
+
     return true;
 }
 
