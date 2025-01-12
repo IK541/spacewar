@@ -53,6 +53,7 @@ bool Player::set_nick(string _nick){
         if(Player::players[i].nick == _nick) return 0;
 
     nick = _nick;
+
     return 1;
 }
 
