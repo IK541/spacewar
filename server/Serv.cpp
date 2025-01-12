@@ -367,6 +367,7 @@ void Serv::send_to_lobby_members(char* msg, int len){
 };
 
 void Serv::send_to_player(int player_id, string msg){
+    if (Player::players[player_id].free == 1 || Player::players[player_id].nick == "") return;
     lock_guard<std::mutex> lock(Player::players[player_id].mtx); // PLAYER MUTEX 
     send(pfds[player_id].fd, msg.c_str(), msg.size(), 0);
 }

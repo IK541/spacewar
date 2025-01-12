@@ -11,7 +11,7 @@ Player::Player(){
     fd = -1;
     ready = false;
     team = 0;
-    // nick = ""; //"free player";
+    nick = ""; //"free player";
     room = -1;
     free = true;
 }
@@ -21,7 +21,7 @@ void Player::take(sockaddr_in _address, int _fd){
     fd = _fd;
     ready = false;
     team = 0;
-    nick = "default player";
+    nick = "";
     room = -1;
     free = false;
 }
@@ -33,7 +33,7 @@ void Player::make_free(){
     fd = -1;
     ready = false;
     team = 0;
-    nick = "free player";
+    nick = "";
     room = -1;
     free = true;
 }
@@ -53,6 +53,8 @@ string Player::get_binary_player_info(){
 
 
 bool Player::set_nick(string _nick){
+
+    if (_nick.size() < 1 && _nick.size() >= 12) return 0;
 
     for(int i = 0; i < Player::max_players; i++)
         if(Player::players[i].nick == _nick) return 0;
