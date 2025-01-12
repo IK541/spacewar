@@ -163,6 +163,8 @@ void Serv::handle_client_input(int client_id) {
             Player::players[client_id].data.pop();
         }
         if(opcode == 'A') {
+            std::cout << "Client " << client_id << " sent a 'A-type message: get nick.\n";
+
             if(Player::players[client_id].data.size()) {
                 bytes_expected = (int) Player::players[client_id].data.front();
                 Player::players[client_id].data.pop();
@@ -206,9 +208,22 @@ void Serv::handle_client_input(int client_id) {
                 lock_guard<std::mutex> lock(mtx);
                 std::cout << "Client " << client_id << " sent a 'D'-type message: enter room.\n";
                     msg = Room::rooms[room].join_room(client_id);
-                    if(msg[0] == 'Y') events.push("0" + std::to_string(room));
+                    if(msg[0] == 'Y'){
+                        
+                        vector<char> binary_room = Room::rooms[room].get_room_info();
 
-                send_to_player(client_id, msg);
+                        char bf[binary_room.size()];
+                        for (int i = 0; i <= binary_room.size(); i++)
+                            bf[i] = binary_room[i];
+
+                        send_to_player(client_id, bf, binary_room.size());
+
+                        std::cout << "Client " << client_id << " joined room << room <<\n";
+
+                        events.push("0" + std::to_string(room));
+                    }
+
+                // send_to_player(client_id, msg);
                 cv.notify_one();
                 }
                 opcode = '-';
@@ -223,7 +238,7 @@ void Serv::handle_client_input(int client_id) {
                 }
                 
                 {
-                std::cout << "Client " << client_id << " sent an 'A'-type message: nick.\n";
+                std::cout << "Client " << client_id << " received nick: " << name << "\n";
                 // receive nick from player
                 lock_guard<std::mutex> lock(mtx);
 

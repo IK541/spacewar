@@ -179,8 +179,7 @@ void handle_events() {
             if(state == STATE_NAME && event.key.code == 59 && name_state.name.size()) name_state.name.pop_back();
             if(state == STATE_NAME && event.key.code == 58) {
                 std::string out = std::string("A");
-                out.push_back(out.size()); // msg len
-                out.append(name_state.name);
+                out.append(name_state.name.size()); // msg len                out.append(name_state.name);
                 tcp_socket.send(out.c_str(), out.size());
             }
             if(state == STATE_LOBBY && event.key.code == 73) lobby_state.room_selected = (lobby_state.room_selected - 1 + ROOM_COUNT) % ROOM_COUNT;
