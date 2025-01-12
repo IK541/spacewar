@@ -4,13 +4,15 @@
 #include <ctime>
 
 
-Player::Player(int player_id, Ship* ship):id(player_id),ship(ship),
+// namespace Gamespace {
+
+PlayerGE::PlayerGE(int player_id, Ship* ship):id(player_id),ship(ship),
 ammo(MAX_AMMO),reload(0),rearm(0),respawn(RESPAWN_TIME),current_bullet(0),
 last_input(GameIn{0,(float)(ship->id<RED_TEAM_BEGIN?M_PI_2:-M_PI_2),false,false}){
     ship->player = NULL;
 }
 
-Player::Player():id(0),ship(NULL),
+PlayerGE::PlayerGE():id(0),ship(NULL),
 ammo(MAX_AMMO),reload(0),rearm(0),respawn(RESPAWN_TIME),current_bullet(0),
 last_input(GameIn{0,0.f,false,false}){}
 
@@ -22,7 +24,7 @@ inline double reduce_speed(double x) {
     return 0.25*s + 0.5 * x;
     return s - 0.5 * s * (x - 1.5 * s) * (x - 1.5 * s);
 }
-void Player::update_ship() {
+void PlayerGE::update_ship() {
     if(this->respawn) {--this->respawn; return;}
     double angle = -this->last_input.angle;
     double da = SHIP_ROTATION * (sin(angle-this->ship->angle));
@@ -38,7 +40,7 @@ void Player::update_ship() {
     this->ship->angle = fmod(this->ship->angle+da+M_PI,2*M_PI)-M_PI;
 }
 
-void Player::shoot(Movables* movables) {
+void PlayerGE::shoot(Movables* movables) {
     if(this->last_input.shoot && this->ammo && !this->reload) {
         movables->shoot(this);
         --this->ammo;
@@ -47,7 +49,7 @@ void Player::shoot(Movables* movables) {
     } if(this->reload) --this->reload;
 }
 
-PlayerData Player::generate_player_data() {
+PlayerData PlayerGE::generate_player_data() {
     return PlayerData {
         this->ammo,
         this->reload,
@@ -109,7 +111,7 @@ void Collider::update_base(Movables* movables, Base* base, vec2 where, bool side
     for(int id = BLUE_TEAM_BEGIN; id < RED_TEAM_BEGIN; ++id) {
         vec2 pos = movables->items[id-1]->position;
         if((pos.x-where.x)*(pos.x-where.x)+(pos.y-where.y)*(pos.y-where.y)<BASE_RADIUS*BASE_RADIUS && get_side(id) == side) {
-            Player* player = ((Player*)((Ship*)movables->items[id-1])->player);
+            PlayerGE* player = ((PlayerGE*)((Ship*)movables->items[id-1])->player);
             if(player == NULL) continue;
             if(player->rearm) --player->rearm;
             else if(player->ammo < MAX_AMMO) {
@@ -120,7 +122,7 @@ void Collider::update_base(Movables* movables, Base* base, vec2 where, bool side
     }
 }
 
-Neighbours Collider::get_neighbours(Movables* movables, Player* player) {
+Neighbours Collider::get_neighbours(Movables* movables, PlayerGE* player) {
     std::vector<SpaceObject*>* objects = new std::vector<SpaceObject*>;
     vec2 sp = player->ship->position;
     for(uint8_t id = BLUE_TEAM_BEGIN; id < TOTAL_ENTITIES; ++id) {
@@ -193,7 +195,7 @@ void Movables::add_asteroid(uint16_t id) {
     items[id-1]->speed = vec2{speed_x, speed_y};
 }
 
-void Movables::shoot(Player* player) {
+void Movables::shoot(PlayerGE* player) {
     uint16_t id = BLUE_BULLETS_BEGIN + (player->ship->id - 1) * BULLETS_PER_PLAYER + player->current_bullet;
     Bullet* bullet = (Bullet*) this->items[id-1];
     bullet->position = player->ship->position;
@@ -227,9 +229,9 @@ void Movables::respawn(Ship* ship) {
         vec2{ SPAWN_RADIUS*cos(angle), BASE_DIST+SPAWN_RADIUS*sin(angle) } :
         vec2{ -SPAWN_RADIUS*cos(angle), -BASE_DIST-SPAWN_RADIUS*sin(angle) };
     ship->speed = vec2{0.0,0.0};
-    if(((Player*)ship->player) == NULL) return;
-    ((Player*)ship->player)->ammo = MAX_AMMO;
-    ((Player*)ship->player)->respawn = RESPAWN_TIME;
+    if(((PlayerGE*)ship->player) == NULL) return;
+    ((PlayerGE*)ship->player)->ammo = MAX_AMMO;
+    ((PlayerGE*)ship->player)->respawn = RESPAWN_TIME;
 }
 
 void Movables::pull_ships(double dt) {
@@ -262,24 +264,24 @@ GameEngine::GameEngine():timestamp(0),movables(rand_from_time()) {
     this->blue.base.hp = BASE_HP;
     this->blue.size = 0;
     for(int id = BLUE_TEAM_BEGIN; id < RED_TEAM_BEGIN; ++id) {
-        this->blue.players[id-BLUE_TEAM_BEGIN] = Player(-1, (Ship*) this->movables.items[id-1]);
+        this->blue.players[id-BLUE_TEAM_BEGIN] = PlayerGE(-1, (Ship*) this->movables.items[id-1]);
     }
     this->red.base.hp = BASE_HP;
     this->red.size = 0;
     for(int id = RED_TEAM_BEGIN; id < BLUE_BULLETS_BEGIN; ++id) {
-        this->red.players[id-RED_TEAM_BEGIN] = Player(-1, (Ship*) this->movables.items[id-1]);
+        this->red.players[id-RED_TEAM_BEGIN] = PlayerGE(-1, (Ship*) this->movables.items[id-1]);
     }
 }
 
 int GameEngine::update_physics(double dt) {
     ++this->timestamp;
     for(int i = 0; i < PLAYERS_PER_TEAM; ++i) {
-        Player* player = this->blue.players + i;
+        PlayerGE* player = this->blue.players + i;
         player->update_ship();
         player->shoot(&this->movables);
     }
     for(int i = 0; i < PLAYERS_PER_TEAM; ++i) {
-        Player* player = this->red.players + i;
+        PlayerGE* player = this->red.players + i;
         player->update_ship();
         player->shoot(&this->movables);
     }
@@ -300,14 +302,14 @@ int GameEngine::get_winner() {
 }
 
 void GameEngine::update_input(int ship_id, GameIn input) {
-    Player* player = get_player(ship_id);
+    PlayerGE* player = get_player(ship_id);
     if(player == NULL) return;
     if(input.timestamp > player->last_input.timestamp)
         player->last_input = input;
 }
 
 GameOut GameEngine::get_output(int ship_id) {
-    Player* player = get_player(ship_id);
+    PlayerGE* player = get_player(ship_id);
     uint32_t timestamp = this->timestamp;
     Base blue = this->blue.base;
     Base red = this->red.base;
@@ -343,7 +345,7 @@ void GameEngine::unset_ship(int ship_id) {
     }
 }
 
-Player* GameEngine::get_player(int player_id) {
+PlayerGE* GameEngine::get_player(int player_id) {
     // linear search - if teams get big this should be improved
     for(int i = 0; i < PLAYERS_PER_TEAM; ++i)
         if(this->blue.players[i].ship->id == player_id)
@@ -353,3 +355,5 @@ Player* GameEngine::get_player(int player_id) {
             return this->red.players+i;
     return NULL;
 }
+
+// } // namespace Gamespace

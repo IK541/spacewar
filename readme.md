@@ -23,8 +23,6 @@ D room_id
 zmien druzyne: 
 E
 
-
-// TODO
 przelacz gotowosc:
 F
 
@@ -34,5 +32,5 @@ G
 
 
 //problems TO SOLVE
-wszyscy gracze domyślnie dołączają do 1 drużyny (mimo, że powinni do tej z najmniejszą iloscią graczy)
+disconnect
 

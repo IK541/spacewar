@@ -6,9 +6,13 @@
 #include "game_engine.hpp"
 #include "../common.hpp"
 
+// using namespace Gamespace;
+
 #define SERVER_PORT 10000
 
 #define BUFFER_SIZE 4096
+
+// namespace gamespace{
 
 // NEW
 uint8_t* UdpOutputTranslator(GameOut output);
@@ -48,3 +52,4 @@ class GameManager {
     GameManager(int room_id);
     ~GameManager();
 };
+// } // namespace gamespace

@@ -5,6 +5,8 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string>
+#include <mutex>
+#include <queue>
 
 using namespace std;
 
@@ -17,6 +19,9 @@ public:
     sockaddr_in address;
     int fd;
     bool free;
+    std::mutex mtx; // for msg
+    std::queue<char> data;
+
 
     static const int max_players = 20;
     static Player players[max_players];
@@ -29,10 +34,14 @@ public:
 
     void make_free();
 
-    void set_nick(char buffer[1024]);
+    bool set_nick(string);
 
+    
+    string change_ready_state();
 
     string get_player_info();
+
+    string get_binary_player_info();
 
 
     static int find_free_slot_serv(){

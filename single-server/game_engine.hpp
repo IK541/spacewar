@@ -5,6 +5,12 @@
 
 #include "../common.hpp"
 
+// #ifndef Gamespace_NAMESPACE_H
+// #define Gamespace_NAMESPACE_H
+
+// namespace Gamespace {
+
+
 #define SPAWN_RADIUS 0.5
 
 #define SHIP_SPEED 5.0
@@ -20,7 +26,7 @@
 #define RED_WIN 3
 
 // predeclared
-class Player;
+class PlayerGE;
 class Movables;
 class Collider;
 
@@ -50,9 +56,9 @@ class Asteroid : public Movable {
 class Ship : public Movable {
     public:
     double angle;
-    Player* player;
+    PlayerGE* player;
     bool side;
-    Ship(uint16_t id, vec2 position, vec2 speed, double angle, Player* player, bool side):
+    Ship(uint16_t id, vec2 position, vec2 speed, double angle, PlayerGE* player, bool side):
     Movable(id, position, speed),angle(angle),player(player),side(side){}
 };
 
@@ -86,7 +92,7 @@ struct Base { uint16_t hp; };
 
 // Main classes
 
-class Player {
+class PlayerGE {
     public:
     int id;
     Ship* ship;
@@ -96,8 +102,8 @@ class Player {
     uint16_t respawn;
     uint16_t current_bullet;
     GameIn last_input;
-    Player();
-    Player(int player_id, Ship* ship);
+    PlayerGE();
+    PlayerGE(int player_id, Ship* ship);
     void update_ship();
     void shoot(Movables* movables);
     PlayerData generate_player_data();
@@ -108,7 +114,7 @@ class Collider {
     void update_collisions(Movables* movables);
     void update_base(Movables* movables, Base* base, vec2 where, bool side);
     // NEW
-    Neighbours get_neighbours(Movables* movables, Player* player);
+    Neighbours get_neighbours(Movables* movables, PlayerGE* player);
 };
 
 class Movables {
@@ -119,7 +125,7 @@ class Movables {
     Movables(unsigned int seed);
     void move(double dt);
     void add_asteroid(uint16_t id);
-    void shoot(Player* player);
+    void shoot(PlayerGE* player);
     void update_asteroids();
     void update_bullets();
     void respawn(Ship* ship);
@@ -131,7 +137,7 @@ class Movables {
 // Game Engine
 
 struct Team {
-    Player players[PLAYERS_PER_TEAM];
+    PlayerGE players[PLAYERS_PER_TEAM];
     Base base;
     uint8_t size;
 };
@@ -150,8 +156,10 @@ class GameEngine {
     Team red;
     Movables movables;
     Collider grid;
-    Player* get_player(int ship_id);
+    PlayerGE* get_player(int ship_id);
     int get_winner();
 };
 
 #define OUTPUT_HEAD_SIZE 18
+// }
+// #endif // Gamespace_NAMESPACE_H

@@ -1,7 +1,11 @@
 #include <cmath>
 #include <unistd.h>
 #include <sys/socket.h>
+#include <cstdio>
 #include "game_manager.hpp"
+#include "game_engine.hpp"
+
+
 
 #pragma pack(push, 1)
 struct CompressedMovable {
