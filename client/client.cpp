@@ -5,6 +5,7 @@
 #include <thread>
 #include <mutex>
 #include <queue>
+#include <string>
 
 #include "game_in.hpp"
 #include "game_out.hpp"
@@ -56,7 +57,12 @@ void udp_receiver();
 void tcp_receiver();
 void handle_events();
 
-int main() {
+int main(int argc, char** argv) {
+    if(argc < 3) {
+        printf("address & port required\n");
+        exit(-1);
+    }
+
     // Window
     window.setFramerateLimit(FPS);
 
@@ -80,7 +86,7 @@ int main() {
     } port = udp_socket.getLocalPort();
     std::thread udp_recv_thread(udp_receiver);
     udp_recv_thread.detach();
-    if(tcp_socket.connect(sf::IpAddress(SERVER_ADDR), SERVER_PORT)) {
+    if(tcp_socket.connect(sf::IpAddress(argv[1]), std::stoi(argv[2]))) {
         printf("connection error\n"); return -1;
     }
     std::thread tcp_recv_thread(tcp_receiver);
@@ -94,18 +100,12 @@ int main() {
     state = STATE_NAME;
     name_state.name = std::string();
     name_state.failed = false;
-    lobby_state.room_selected = 1;
+    lobby_state.room_selected = 0;
     lobby_state.rooms = std::vector<RoomInfo>();
-    lobby_state.rooms.push_back(RoomInfo{0,0,2,2});
-    lobby_state.rooms.push_back(RoomInfo{1,0,1,0});
-    lobby_state.rooms.push_back(RoomInfo{2,1,3,1});
     room_state.blue = std::vector<PlayerInfo>();
-    room_state.blue.push_back(PlayerInfo{false,std::string("IK")});
-    room_state.blue.push_back(PlayerInfo{true,std::string("MP")});
-    room_state.red.push_back(PlayerInfo{true,std::string("JK")});
+    room_state.red = std::vector<PlayerInfo>();
 
     while (window.isOpen()) {
-        // printf("%d\n", state);
 
         // init phase
         handle_events();
@@ -254,7 +254,6 @@ void tcp_receiver() {
                 name_state.failed = true;
             }
             if(opcode == 'G') {
-                // TODO: this serverside
                 for(PlayerInfo player: room_state.blue) player.ready = false;
                 for(PlayerInfo player: room_state.red) player.ready = false;
                 game_state.reset();
