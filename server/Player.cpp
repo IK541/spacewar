@@ -1,5 +1,6 @@
 #include "Player.hpp"
 #include "Room.hpp"
+#include "Serv.hpp"
 
 Player::Player(){
     address = {};
@@ -69,6 +70,8 @@ string Player::get_player_info(){
 }
 
 string Player::change_ready_state(){
+    unique_lock<mutex> lock(mtx);
+
     if(room == -1)
         return "N\nNot in room " + to_string(ready) + "\n";
 
@@ -76,10 +79,14 @@ string Player::change_ready_state(){
     if(ready) ready = 0;
     else ready = 1;
     printf("Y\nready state changed to %i\n", ready);
+    Serv::serv.events.push("1" + std::to_string(room));// FAILS HERE
+    Serv::serv.cv.notify_one();
 
     if (Room::rooms[room].get_player_count() == Room::rooms[room].get_ready_players()
     &&  Room::rooms[room].teams_player_number[0] > 0
     && Room::rooms[room].teams_player_number[1] > 0){
+
+                
                 Room::rooms[room].events.push("0");
                 Room::rooms[room].cv.notify_one();
 

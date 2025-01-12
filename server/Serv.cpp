@@ -177,8 +177,7 @@ void Serv::handle_client_input(int client_id) {
             lock_guard<std::mutex> lock(mtx);
             std::cout << "Client " << client_id << " sent a 'F'-type message: change ready state.\n";
             msg = Player::players[client_id].change_ready_state();
-            events.push("1" + std::to_string(Player::players[client_id].room));// FAILS HERE
-            cv.notify_one();
+            
             }
 
         }
@@ -189,16 +188,22 @@ void Serv::handle_client_input(int client_id) {
                 room_str.push_back(Player::players[client_id].data.front());
                 Player::players[client_id].data.pop();
             } int room = stoi(room_str);
+            int old_room = Player::players[client_id].room;
             {
                 lock_guard<std::mutex> lock(mtx);
                 if (room >= 0){
                     std::cout << "Client " << client_id << " sent a 'D'-type message: enter room.\n";
                     msg = Room::rooms[room].join_room(client_id);
+                    if(msg[0] == 'Y') events.push("0" + std::to_string(room));
+
                 }else{
                     std::cout << "Client " << client_id << " sent a 'D'-type message: leave room.\n";
                     msg = Room::leave_room(client_id);
+                    if(msg[0] == 'Y') events.push("2" + std::to_string(old_room));
+
+                    room = -2;
+                    
                 }
-                if(msg[0] == 'Y') events.push("0" + std::to_string(room));
                 cv.notify_one();
             }
         }
@@ -295,16 +300,28 @@ void Serv::monitor(){
                         // events type:= 0: detailed, 1: general
             string event = events.front();
             cout << "detected event: " << event << endl;
-            if(event[0] == '0' && event[1] != '-'){ // detailed room info update
+
+            // leave room exception
+            if(event[0] == '2'){
                 binary_lobby = Room::get_binary_general_room_info();
                 send_to_lobby_members(binary_lobby);
+                binary_lobby = Room::rooms[stoi(event.substr(1))].get_binary_room_info();
+                send_to_room_members(stoi(event.substr(1)), binary_lobby);
+                
 
             }
-            binary_lobby = Room::rooms[stoi(event.substr(1))].get_binary_room_info();
+            else{
 
-            send_to_room_members(stoi(event.substr(1)), binary_lobby);      
+                if(event[0] == '0'){ // detailed room info update
+                    binary_lobby = Room::get_binary_general_room_info();
+                    send_to_lobby_members(binary_lobby);
 
+                }
+                binary_lobby = Room::rooms[stoi(event.substr(1))].get_binary_room_info();
 
+                send_to_room_members(stoi(event.substr(1)), binary_lobby);      
+
+            }
            
             events.pop();
         }

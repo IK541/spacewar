@@ -199,7 +199,6 @@ bool Room::start_game() {
 
     Serv::serv.send_to_lobby_members(msg);
 
-    sleep(5);
     printf("Game has ended in room %i\n", id);
     playing = false;
     return true;
